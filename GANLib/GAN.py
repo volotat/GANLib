@@ -1,14 +1,6 @@
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
-from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.convolutional import UpSampling2D, Conv2D
-from keras.models import Sequential, Model, load_model
-from keras.optimizers import Adam, RMSprop, Nadam
-
-from collections import deque
-from random import randint
-
-
+from keras.layers import Input
+from keras.models import Model, load_model
+from keras.optimizers import Adam
 import os
 import numpy as np
 
@@ -195,7 +187,6 @@ class GAN():
                 else:
                     test_val = np.zeros(batch_size)
                 
-                #idx = np.random.randint(0, train_set.shape[0], batch_size)
                 noise = np.random.normal(train_set_mean, train_set_std, (batch_size,)+ self.input_shape)
                 cont_val = self.discriminator.predict(noise)
                 
