@@ -11,14 +11,14 @@ def save_hist_image(hist, file):
     plt.plot(hist['metric'][:hist_size,1], '-',linewidth=0.8, label="metric min", color='C0', alpha = 0.5)
     plt.plot(hist['metric'][:hist_size,2], '-',linewidth=0.8, label="metric max", color='C0', alpha = 0.5)
     plt.axhline(hist['best_metric'],linewidth=0.8)
-    plt.xlabel(hist['best_metric'])
+    plt.xlabel('Best result: %f'%hist['best_metric'])
     plt.grid(True)
 
     plt.subplot(2, 1, 2)
     plt.plot(hist['train_val'][:hist_size,0], '-',linewidth=0.8, label="train_data_valid", color='C0')
     plt.plot(hist['test_val'][:hist_size,0], '-',linewidth=0.8, label="test_data_valid", color='C1')
 
-    plt.plot(hist['control_val'][:hist_size,0], '-',linewidth=0.8, label="control_valid", color='C3')
+    #plt.plot(hist['control_val'][:hist_size,0], '-',linewidth=0.8, label="control_valid", color='C3')
     plt.plot(hist['gen_val'][:hist_size,0], '-',linewidth=0.8, label="gen_val", color='C4')
 
     plt.grid(True)
@@ -26,6 +26,6 @@ def save_hist_image(hist, file):
 
     plt.tight_layout()
     
-    plt.savefig(file)
+    plt.savefig(file, format='png')
     plt.close()
     

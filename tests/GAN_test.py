@@ -153,7 +153,6 @@ for i in range(len(tests['dataset'])):
 
     # Configure input
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    #X_train = np.mean(X_train, axis = -1)
 
     if len(X_train.shape)<4:
         X_train = np.expand_dims(X_train, axis=3)

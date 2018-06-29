@@ -1,4 +1,4 @@
-from GANLib.GAN import GAN
+from GANLib.CGAN import CGAN
 from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
@@ -15,8 +15,9 @@ import numpy as np
 class conv_model_28(): 
     def build_generator(self):
         input_lat = Input(shape=(self.latent_dim,))
+        input_lbl = Input(shape=self.label_shape) 
 
-        layer = input_lat
+        layer = concatenate([input_lat, input_lbl])
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = BatchNormalization(momentum=0.8)(layer)
@@ -39,10 +40,11 @@ class conv_model_28():
         layer = BatchNormalization(momentum=0.8, axis = -1)(layer)
         
         img = Conv2D(1, (1,1), padding='same')(layer)
-        return Model(input_lat, img)
+        return Model([input_lat, input_lbl], img)
         
     def build_discriminator(self):
         input_img = Input(shape=self.input_shape)
+        input_lbl = Input(shape=self.label_shape) 
 
         layer = Conv2D(8, (3,3), strides = 2, padding='same')(input_img)
         layer = LeakyReLU(alpha=0.2)(layer)
@@ -52,13 +54,14 @@ class conv_model_28():
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Flatten()(layer)
         
+        layer = concatenate([layer, input_lbl])
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
         validity = Dense(1, activation='sigmoid')(layer)
-        return Model(input_img, validity)    
+        return Model([input_img, input_lbl], validity)    
 
 class dense_model(): 
     def build_generator(self):
@@ -162,8 +165,10 @@ def sample_images(gen, file):
     r, c = 5, 5
     
     noise = np.random.uniform(-1, 1, (r * c, noise_dim))
+    labels = np.zeros((r*c,10))
+    labels[:, 8] = 1.
 
-    gen_imgs = gen.predict([noise])
+    gen_imgs = gen.predict([noise, labels])
 
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
@@ -187,24 +192,26 @@ for i in range(len(tests['dataset'])):
     model = tests['model'][i]  
 
     # Load the dataset
-    (X_train, _), (_, _) = tests['dataset'][i].load_data()
+    (X_train, labels), (_, _) = tests['dataset'][i].load_data()
+    
+    Y_train = np.zeros((X_train.shape[0],10))
+    Y_train[np.arange(X_train.shape[0]), labels] = 1.
 
     # Configure input
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    #X_train = np.mean(X_train, axis = -1)
 
     if len(X_train.shape)<4:
         X_train = np.expand_dims(X_train, axis=3)
 
     #Run GAN for 20000 iterations
-    gan = GAN(X_train.shape[1:], noise_dim, mode = tests['mode'][i])
+    gan = CGAN(X_train.shape[1:], (10,), noise_dim, mode = tests['mode'][i])
     gan.build_generator = lambda self=gan: model.build_generator(self)
     gan.build_discriminator = lambda self=gan: model.build_discriminator(self)
     gan.build_models()
 
     def callback():
-        path = 'images/GAN/'+tests['img_path'][i]+'/conv_'+tests['mode'][i]
+        path = 'images/CGAN/'+tests['img_path'][i]+'/conv_'+tests['mode'][i]
         sample_images(gan.generator, path+'.png')
         plotter.save_hist_image(gan.history, path+'_hist.png')
         
-    gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)
+    gan.train(X_train, Y_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)

@@ -9,28 +9,27 @@ from . import metrics
 
 
 class CGAN():
-    def metric_test(self, X_train, Y_train, pred_num = 32):    
+    def metric_test(self, set_data, set_labels, pred_num = 32):    
         met_arr = np.zeros(pred_num)
         
-        n_indx = np.random.choice(X_train.shape[0],pred_num)
-        input = Y_train[n_indx]
-        output = X_train[n_indx]
+        n_indx = np.random.choice(set_data.shape[0],pred_num)
+        labels = set_labels[n_indx]
+        org_set = set_data[n_indx]
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
-        new_arr = self.generator.predict([noise,input]) 
-        met_arr = self.metric(output, new_arr)
+        gen_set = self.generator.predict([noise,labels]) 
+        met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, label_shape, latent_dim = 100):
+    def __init__(self, input_shape, label_shape, latent_dim = 100, mode = 'vanilla'):
         # Input shape
         self.input_shape = input_shape
         self.label_shape = label_shape
-        #self.num_classes = 10
-        self.input_dim = np.prod(input_shape)
-        self.label_dim = np.prod(label_shape)
         self.latent_dim = latent_dim
-
-        self.optimizer = Adam(0.0002, 0.5)
+        self.mode = mode
+        
+        self.build_discriminator = None
+        self.build_generator = None
         
         self.best_model = None
         self.best_metric = 0
@@ -38,19 +37,23 @@ class CGAN():
         self.epoch = 0
         self.history = None
         
-    def build_models(self):
-        if os.path.isfile('generator.h5') and os.path.isfile('discriminator.h5'):
-            self.generator = load_model('generator.h5')
-            self.discriminator = load_model('discriminator.h5')
+    def build_models(self, optimizer = None, path = ''):
+        if optimizer is None:
+            optimizer = Adam(0.0002, 0.5)
+    
+        if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
+            self.generator = load_model(path+'/generator.h5')
+            self.discriminator = load_model(path+'/discriminator.h5')
         else:
-            # Build and compile the discriminator
-            self.discriminator = self.build_discriminator()
-            self.discriminator.compile(loss=['binary_crossentropy'],
-                optimizer=self.optimizer,
-                metrics=['accuracy'])
+            if self.build_discriminator is None or self.build_generator is None:
+                raise Exception("Model building functions are not defined")
+            else:
+                # Build and compile the discriminator
+                self.discriminator = self.build_discriminator()
+                self.discriminator.compile(loss=['binary_crossentropy'], optimizer=optimizer)
 
-            # Build the generator
-            self.generator = self.build_generator()
+                # Build the generator
+                self.generator = self.build_generator()
 
         # The generator takes noise and the target label as input
         # and generates the corresponding digit of that label
@@ -68,36 +71,78 @@ class CGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         self.combined = Model([noise, label], valid)
-        self.combined.compile(loss=['binary_crossentropy'],
-            optimizer=self.optimizer)
+        self.combined.compile(loss=['binary_crossentropy'], optimizer=optimizer)
             
-        print('models builded')    
+        print('models builded')   
             
     def save(self):
         self.generator.save('generator.h5')
         self.discriminator.save('discriminator.h5')
       
-    def train(self, X_train, y_train, epochs, batch_size=128, sample_interval=100, validation_split = 500, checkpoint = lambda:True):
-        checkpoint_range = 100
-        c_r = checkpoint_range
+    def train(self, data_set, label_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+        """Trains the model for a given number of epochs (iterations on a dataset).
+        # Arguments
+            data_set: 
+                Numpy array of training data.
+            data_labels: 
+                Numpy array of labels assigned with data_set   
+            batch_size:
+                Number of samples per gradient update.
+            epochs: Number of epochs to train the model.
+                An epoch is an iteration over batch sized samples of dataset.
+            checkpoint_range:
+                Range in witch checkpoint callback will be called and history data will be stored.
+            verbose: 
+                Integer. 0, 1. Verbosity mode.
+            checkpoint_callback: List of `keras.callbacks.Callback` instances.
+                Callback to apply during training on checkpoint stage.
+            validation_split: Float between 0 and 1.
+                Fraction of the training data to be used as validation data.
+                The model will set apart this fraction of the training data,
+                will not train on it, and will evaluate
+                the loss and any model metrics
+                on this data at the end of each epoch.
+                The validation data is selected from the last samples.
+            save_best_model:
+                Boolean. If True, generator weights will be resigned to best model according to chosen metric.
+        # Returns
+            A history object. 
+        """ 
+    
+        if 0. < validation_split < 1.:
+            split_at = int(data_set.shape[0] * (1. - validation_split))
+            train_set_data = data_set[:split_at]
+            valid_set_data = data_set[split_at:]
+            
+            train_set_labels = label_set[:split_at]
+            valid_set_labels = label_set[split_at:]
+        else:
+            train_set_data = data_set
+            train_set_labels = label_set
+            valid_set_data = None
+            valid_set_labels = None
     
         #collect statistical info of data
-        X_train_std = np.std(X_train,axis = 0)
-        X_train_mean = np.mean(X_train,axis = 0)
+        data_set_std = np.std(data_set,axis = 0)
+        data_set_mean = np.mean(data_set,axis = 0)
         
-        y_train_std = np.std(y_train,axis = 0)
-        y_train_mean = np.mean(y_train,axis = 0)
+        label_set_std = np.std(label_set,axis = 0)
+        label_set_mean = np.mean(label_set,axis = 0)
     
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
         fake = np.zeros((batch_size, 1))
 
-        history = { 'gen_val':np.zeros(epochs//c_r+1), 
-                    'train_val':np.zeros((epochs//c_r+1,batch_size)), 
-                    'test_val':np.zeros((epochs//c_r+1,batch_size)), 
-                    'control_val_x':np.zeros(epochs//c_r+1), 
-                    'control_val_y':np.zeros(epochs//c_r+1), 
-                    'metric':np.zeros((epochs//c_r+1,1000))}
+        #mean min max
+        max_hist_size = epochs//checkpoint_range + 1
+        history = { 'gen_val'           :np.zeros((max_hist_size,3)), 
+                    'train_val'         :np.zeros((max_hist_size,3)), 
+                    'test_val'          :np.zeros((max_hist_size,3)), 
+                    'data_control_val'  :np.zeros((max_hist_size,3)), 
+                    'label_control_val' :np.zeros((max_hist_size,3)), 
+                    'metric'            :np.zeros((max_hist_size,3)),
+                    'best_metric'       :0,
+                    'hist_size'         :0}
         
         for epoch in range(epochs):
             self.epoch = epoch
@@ -106,17 +151,99 @@ class CGAN():
             #  Train Discriminator
             # ---------------------
 
-            # Select a random half batch of images
-            idx = np.random.randint(validation_split, X_train.shape[0], batch_size)
-            imgs, labels = X_train[idx], y_train[idx]
+            # Select a random batch of images
+            idx = np.random.randint(0, train_set_data.shape[0], batch_size)
+            imgs, labels = train_set_data[idx], train_set_labels[idx]
 
             # Sample noise as generator input
-            #noise = np.random.normal(0, 0.3, (batch_size, self.latent_dim))
             noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
 
-            # Generate a half batch of new images
+            # Generate new images
             gen_imgs = self.generator.predict([noise, labels])
+            
+            if self.mode == 'stable':
+                trash_imgs = imgs.copy()
+                trash_labels = labels.copy()
+                trash_imgs[:batch_size//2] = np.random.normal(data_set_mean, data_set_std, (batch_size//2,) + self.input_shape)
+                trash_labels[batch_size//2:] = np.random.normal(label_set_mean, label_set_std, (batch_size//2,) + self.label_shape)
+            
+                #trash_imgs = np.random.normal(train_set_mean, train_set_std, (batch_size,) + self.input_shape)
 
+                # Validate how good generated images looks like
+                val = self.discriminator.predict([gen_imgs,labels])
+                crit = 1. - np.abs(1. - val) ** 0.5
+                
+                # Train the discriminator
+                d_loss_real = self.discriminator.train_on_batch([imgs,labels], valid)
+                d_loss_fake = self.discriminator.train_on_batch([gen_imgs,labels], crit)
+                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs, trash_labels], fake)
+                d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
+            elif self.mode == 'vanilla':
+                d_loss_real = self.discriminator.train_on_batch([imgs,labels], valid)
+                d_loss_fake = self.discriminator.train_on_batch([gen_imgs,labels], fake)
+                d_loss = (d_loss_real + d_loss_fake) / 2
+                
+            else: raise Exception("Mode '" + self.mode+ "' is unknown")
+            
+            # ---------------------
+            #  Train Generator
+            # ---------------------
+            
+            # Train the generator
+            g_loss = self.combined.train_on_batch([noise, labels], valid)
+
+            # Plot the progress
+            if epoch % checkpoint_range == 0:
+                gen_val = self.discriminator.predict([gen_imgs, labels])
+                train_val = self.discriminator.predict([imgs, labels])
+                
+                if valid_set_data is not None and valid_set_labels is not None: 
+                    idx = np.random.randint(0, valid_set_data.shape[0], batch_size)
+                    test_val = self.discriminator.predict([valid_set_data[idx], valid_set_labels[idx]])
+                else:
+                    test_val = np.zeros(batch_size)
+                
+                noise_as_data = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
+                noise_as_labels = np.random.normal(label_set_mean, label_set_std, (batch_size,)+ self.label_shape)
+                data_cont_val  = self.discriminator.predict([noise_as_data, labels])
+                label_cont_val = self.discriminator.predict([imgs, noise_as_labels])
+                
+                metric = self.metric_test(train_set_data, train_set_labels, 1000)
+                print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                
+                hist_size = history['hist_size'] = history['hist_size']+1
+                history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
+                history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
+                history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                history['data_control_val'] [hist_size-1] = np.mean(data_cont_val), np.min(data_cont_val), np.max(data_cont_val) 
+                history['label_control_val'][hist_size-1] = np.mean(label_cont_val), np.min(label_cont_val), np.max(label_cont_val) 
+                history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                
+                if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                    self.best_model = self.generator.get_weights()
+                    self.best_metric = np.mean(metric)
+                    history['best_metric'] = self.best_metric
+                    
+                self.history = history
+                
+                if checkpoint_callback is not None:
+                    checkpoint_callback()
+        
+        
+        
+        if save_best_model:
+            self.generator.set_weights(self.best_model)    
+            
+        self.epoch = epochs
+        checkpoint_callback()   
+        
+        return self.history   
+    
+    
+    
+    
+        '''
+        for epoch in range(epochs):
             # Train the discriminator
             val = self.discriminator.predict([gen_imgs, labels])
             crit = 1. - np.abs(1. - val) ** 0.5
@@ -130,13 +257,6 @@ class CGAN():
             d_loss_fake = self.discriminator.train_on_batch([gen_imgs, labels], crit)
             d_loss_trsh = self.discriminator.train_on_batch([trash_batch_0, trash_batch_1], fake)
             d_loss = np.add(d_loss_real, d_loss_fake) / 2
-            
-            #clip_value = 10
-            #for l in self.discriminator.layers:
-            #    weights = l.get_weights()
-            #    weights = [np.clip(w, -clip_value, clip_value) for w in weights]
-            #    l.set_weights(weights)
-            
             
             # ---------------------
             #  Train Generator
@@ -175,25 +295,6 @@ class CGAN():
                 metric = self.metric_test(X_train, y_train, 1000)
                 print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
                 
-                history['gen_val'][epoch//c_r] = gen_val
-                history['train_val'][epoch//c_r] = train_val.reshape(batch_size)
-                history['test_val'][epoch//c_r] = test_val.reshape(batch_size)
-                history['control_val_x'][epoch//c_r] = cont_val_x
-                history['control_val_y'][epoch//c_r] = cont_val_y
-                history['metric'][epoch//c_r] = metric
                 
-                if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                    self.best_model = self.generator.get_weights()
-                    self.best_metric = np.mean(metric)
-            
-                self.history = history
-                
-                checkpoint()
-            # If at save interval => save generated image samples
-            #if epoch % sample_interval == 0:
-            #    self.sample_images(epoch)
-            #    self.save_hist_image(history,epoch)
-                
-        #self.generator.set_weights(self.best_model)    
-        #self.sample_images(epochs)
-        #return history    
+        '''
+        pass

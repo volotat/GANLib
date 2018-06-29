@@ -8,7 +8,6 @@ import numpy as np
 from . import metrics
 
 
-
 class GAN():
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -113,8 +112,8 @@ class GAN():
             valid_set = None
     
         #collect statistical info of data
-        train_set_std = np.std(train_set,axis = 0)
-        train_set_mean = np.mean(train_set,axis = 0)
+        data_set_std = np.std(data_set,axis = 0)
+        data_set_mean = np.mean(data_set,axis = 0)
     
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
@@ -148,7 +147,7 @@ class GAN():
             gen_imgs = self.generator.predict([noise])
             
             if self.mode == 'stable':
-                trash_imgs = np.random.normal(train_set_mean, train_set_std, (batch_size,) + self.input_shape)
+                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
 
                 # Validate how good generated images looks like
                 val = self.discriminator.predict([gen_imgs])
@@ -178,8 +177,9 @@ class GAN():
             if epoch % checkpoint_range == 0:
                 gen_val = self.discriminator.predict([gen_imgs])
                 
-                idx = np.random.randint(0, train_set.shape[0], batch_size)
-                train_val = self.discriminator.predict(train_set[idx])
+                #idx = np.random.randint(0, train_set.shape[0], batch_size)
+                #train_val = self.discriminator.predict(train_set[idx])
+                train_val = self.discriminator.predict([imgs])
                 
                 if valid_set is not None: 
                     idx = np.random.randint(0, valid_set.shape[0], batch_size)
@@ -187,7 +187,7 @@ class GAN():
                 else:
                     test_val = np.zeros(batch_size)
                 
-                noise = np.random.normal(train_set_mean, train_set_std, (batch_size,)+ self.input_shape)
+                noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
                 cont_val = self.discriminator.predict(noise)
                 
                 metric = self.metric_test(train_set, 1000)
