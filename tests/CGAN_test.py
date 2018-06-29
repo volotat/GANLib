@@ -1,4 +1,4 @@
-from GANLib.CGAN import CGAN
+from GANLib import CGAN
 from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
