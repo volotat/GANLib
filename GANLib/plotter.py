@@ -15,11 +15,9 @@ def save_hist_image(hist, file):
     plt.grid(True)
 
     plt.subplot(2, 1, 2)
-    plt.plot(hist['train_val'][:hist_size,0], '-',linewidth=0.8, label="train_data_valid", color='C0')
-    plt.plot(hist['test_val'][:hist_size,0], '-',linewidth=0.8, label="test_data_valid", color='C1')
-
-    #plt.plot(hist['control_val'][:hist_size,0], '-',linewidth=0.8, label="control_valid", color='C3')
-    plt.plot(hist['gen_val'][:hist_size,0], '-',linewidth=0.8, label="gen_val", color='C4')
+    for i in range(len(hist) - 3):
+        key = list(hist.keys())[i]
+        plt.plot(hist[key][:hist_size,0], '-',linewidth=0.8, label=key, color='C'+str(i))
 
     plt.grid(True)
     plt.legend()
