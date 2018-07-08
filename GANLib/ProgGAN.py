@@ -44,13 +44,19 @@ class ProgGAN():
         layer = RepeatVector(16)(input_layer)
         layer = Reshape((4, 4, self.latent_dim))(layer)
         
-        layer = Conv2D(self.latent_dim, (3,3), padding='same')(layer)
+        layer = Conv2D(self.latent_dim, (4,4), padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         
-        return Model(input_lat, layer)
+        layer = Conv2D(3, (1,1))(layer)
+        return Model(input_layer, layer)
         
     def build_discriminator(self):
-        input_layer = Input(shape=(4,4,512))
+        input_layer = Input(shape=(4,4,3))
+        layer = input_layer
+        
+        layer = Conv2D(self.latent_dim, (1,1))(layer)
+        layer = LeakyReLU(alpha=0.2)(layer) 
+        
         layer = Conv2D(self.latent_dim, (4,4), padding='valid')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         layer = Flatten()(layer)

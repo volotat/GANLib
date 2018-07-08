@@ -5,5 +5,6 @@ from . import metrics
 from . import plotter
 from .GAN import GAN
 from .CGAN import CGAN
+from .ProgGAN import ProgGAN
 
 __version__ = '0.0.1'
