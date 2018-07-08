@@ -9,6 +9,6 @@
 
 ## Day 2 : July 8 , 2018
  
-**Today's Progress** : Start working on Progressive GAN implementation. For now it's only implement basic idea of growing layers. For now it's implements only a basic idea of growing layers. Other ideas from original paper will be added gradually. 
+**Today's Progress** : Start working on Progressive GAN implementation. For now I'm going to implement basic idea of growing layers. Other ideas from original paper will be added gradually. 
 
 **Link of Work:**   [Commit](https://github.com/Mylittlerapture/GANLib/commit/eb270d9d9f20295f13cefb0f1251ecad30709a2c), [Commit](https://github.com/Mylittlerapture/GANLib/commit/85c44053e3bf3dff5381dd8938318bdd04ea35cf)
