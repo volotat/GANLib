@@ -10,8 +10,8 @@ Also going to dedicate this project as part of [#100DaysofMLCode](https://github
 #### Example:
 ```python
 gan = GAN(data_shape, noise_dim) #define type of Generative model
-gan.build_generator = lambda self=gan: model.build_generator(self) #define generator build function
-gan.build_discriminator = lambda self=gan: model.build_discriminator(self) #define discriminator build function
+gan.build_generator = lambda self=gan: build_generator(self) #define generator build function
+gan.build_discriminator = lambda self=gan: build_discriminator(self) #define discriminator build function
 gan.build_models() #build all necessery models
 gan.train(data, epochs=20000, batch_size=64, validation_split = 0.1) #train GAN for 20000 iterations
 ```
