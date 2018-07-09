@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, Reshape, Flatten, RepeatVector
+from keras.layers import Input, Dense, Reshape, Flatten, RepeatVector, AveragePooling2D, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import Conv2D
 
@@ -8,9 +8,16 @@ from keras.optimizers import Adam
 import os
 import numpy as np
 
+from skimage.measure import block_reduce
 
 from . import metrics
 
+#Notes:
+#   In original paper all weights remains trainable, but I need to make this optional
+#   Need to restrict data shape to power of 2
+#   Make channels on layers became smaller while growing or make it optional
+#   Make epochs_grow_rate automatic, and also spend less time while network is small
+#   Take model structure outside of the class
 
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    
@@ -37,27 +44,58 @@ class ProgGAN():
         
         self.epoch = 0
         self.history = None
+        
+        self.layers = 0
+        sz = 2 ** (self.layers + 2)
+        self.inp_shape = (sz,sz,3)
+        
+        
+        self.genr_head_weights = None
+        self.disc_head_weights = None
+        
+        self.genr_weights = []
+        self.disc_weights = []
 
+        
+    def generator_body(self, input_layer):
+        layer = input_layer
+        for i in range(self.layers):
+            layer = UpSampling2D(2)(layer)
+            layer = Conv2D(64, (3,3), padding='same', weights = self.genr_weights[i], name = 'genr_layer_'+str(i))(layer)
+            layer = LeakyReLU(alpha=0.2)(layer) 
+        return layer
+    
+    def discriminator_body(self, input_layer):
+        layer = input_layer
+        for i in range(self.layers):
+            layer = Conv2D(64, (3,3), padding='same', weights = self.disc_weights[i], name = 'disc_layer_'+str(i))(layer)
+            layer = LeakyReLU(alpha=0.2)(layer)
+            layer = AveragePooling2D(2)(layer)
+        return layer  
 
     def build_generator(self):
         input_layer = Input(shape=(self.latent_dim,))
         layer = RepeatVector(16)(input_layer)
         layer = Reshape((4, 4, self.latent_dim))(layer)
         
-        layer = Conv2D(self.latent_dim, (4,4), padding='same')(layer)
+        layer = Conv2D(self.latent_dim, (4,4), padding='same', weights = self.genr_head_weights, name = 'genr_head')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
+        
+        layer = self.generator_body(layer)
         
         layer = Conv2D(3, (1,1))(layer)
         return Model(input_layer, layer)
         
     def build_discriminator(self):
-        input_layer = Input(shape=(4,4,3))
+        input_layer = Input(shape=self.inp_shape)
         layer = input_layer
         
-        layer = Conv2D(self.latent_dim, (1,1))(layer)
+        layer = Conv2D(64, (1,1))(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         
-        layer = Conv2D(self.latent_dim, (4,4), padding='valid')(layer)
+        layer = self.discriminator_body(layer)
+        
+        layer = Conv2D(self.latent_dim, (4,4), padding='valid', weights = self.disc_head_weights, name = 'disc_head')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         layer = Flatten()(layer)
         layer = Dense(1, activation='sigmoid')(layer)
@@ -105,7 +143,7 @@ class ProgGAN():
         self.generator.save('generator.h5')
         self.discriminator.save('discriminator.h5')
     
-    def train(self, data_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, epochs_grow_rate = 1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -132,18 +170,27 @@ class ProgGAN():
         # Returns
             A history object. 
         """ 
+        data_set_org = data_set.copy()
+        
+        def setup():
+            sz = data_set_org.shape[1] // self.inp_shape[0]
+            data_set = block_reduce(data_set_org, block_size=(1, sz, sz, 1), func=np.mean)
+        
+            if 0. < validation_split < 1.:
+                split_at = int(data_set.shape[0] * (1. - validation_split))
+                train_set = data_set[:split_at]
+                valid_set = data_set[split_at:]
+            else:
+                train_set = data_set
+                valid_set = None
+        
+            #collect statistical info of data
+            data_set_std = np.std(data_set,axis = 0)
+            data_set_mean = np.mean(data_set,axis = 0)
+            
+            return train_set, valid_set, data_set_std, data_set_mean
     
-        if 0. < validation_split < 1.:
-            split_at = int(data_set.shape[0] * (1. - validation_split))
-            train_set = data_set[:split_at]
-            valid_set = data_set[split_at:]
-        else:
-            train_set = data_set
-            valid_set = None
-    
-        #collect statistical info of data
-        data_set_std = np.std(data_set,axis = 0)
-        data_set_mean = np.mean(data_set,axis = 0)
+        train_set, valid_set, data_set_std, data_set_mean = setup()
     
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
@@ -163,6 +210,27 @@ class ProgGAN():
             self.epoch = epoch
             
             # ---------------------
+            # Grow Network
+            # ---------------------
+            if epoch%epochs_grow_rate == epochs_grow_rate-1:
+                if self.inp_shape != self.input_shape:
+                    self.genr_head_weights = self.generator.get_layer('genr_head').get_weights()
+                    self.disc_head_weights = self.discriminator.get_layer('disc_head').get_weights()
+                    for i in range(self.layers):
+                        self.genr_weights[i] = self.generator.get_layer('genr_layer_'+str(i)).get_weights()
+                        self.disc_weights[i] = self.discriminator.get_layer('disc_layer_'+str(i)).get_weights()
+                    self.genr_weights.append(None)
+                    self.disc_weights.append(None)
+                    self.layers += 1
+                    sz = 2 ** (self.layers + 2)
+                    self.inp_shape = (sz,sz,3)
+                    self.build_models()
+                    
+                    train_set, valid_set, data_set_std, data_set_mean = setup()
+                
+                
+            
+            # ---------------------
             #  Train Discriminator
             # ---------------------
 
@@ -177,7 +245,7 @@ class ProgGAN():
             gen_imgs = self.generator.predict([noise])
             
             if self.mode == 'stable':
-                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
+                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.inp_shape)
 
                 # Validate how good generated images looks like
                 val = self.discriminator.predict([gen_imgs])
@@ -217,7 +285,7 @@ class ProgGAN():
                 else:
                     test_val = np.zeros(batch_size)
                 
-                noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
+                noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
                 cont_val = self.discriminator.predict(noise)
                 
                 metric = self.metric_test(train_set, 1000)
