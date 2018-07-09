@@ -16,5 +16,6 @@
 
 ## Day 3 : July 9 , 2018
  
-**Today's Progress** : Progressive GAN is now growing during training. Not sure about overall structure though. Probably will change it later.
+**Today's Progress** : Progressive GAN is now growing during training. Not sure about overall structure though. Probably will change it later. 
+
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/54816d45c9b02e308712e765e78dee97b55b4b56)
