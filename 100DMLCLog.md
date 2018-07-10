@@ -19,3 +19,9 @@
 **Today's Progress** : Progressive GAN is now growing during training. Not sure about overall structure though. Probably will change it later. 
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/54816d45c9b02e308712e765e78dee97b55b4b56)
+
+## Day 4 : July 10 , 2018
+ 
+**Today's Progress** : Added template for Adversarial Autoencoder with little twist to it, trying to test some ideas. 
+
+**Link of Work:**  [Commit]()
