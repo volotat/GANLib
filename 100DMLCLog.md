@@ -24,4 +24,4 @@
  
 **Today's Progress** : Added template for Adversarial Autoencoder with little twist to it, trying to test some ideas. 
 
-**Link of Work:**  [Commit]()
+**Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/77e18eacb2447458bc809a1ac4bf0a733ae05a0f)
