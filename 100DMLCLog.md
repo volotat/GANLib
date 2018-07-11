@@ -32,4 +32,4 @@
  
 **Today's Progress** : Today I experimented with domain to domain encoding, with a little bit of success. Because result code end up way different from AAE I split it to different class called DAAE (Domain based Adversarial Autoencoder)
 
-**Link of Work:**  [Commit]()
+**Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/eadf7819fd1e309c70e461b30b808c4cf640fc28)
