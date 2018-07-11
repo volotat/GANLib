@@ -20,8 +20,16 @@
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/54816d45c9b02e308712e765e78dee97b55b4b56)
 
+
 ## Day 4 : July 10 , 2018
  
 **Today's Progress** : Added template for Adversarial Autoencoder with little twist to it, trying to test some ideas. 
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/77e18eacb2447458bc809a1ac4bf0a733ae05a0f)
+
+
+## Day 5 : July 11 , 2018
+ 
+**Today's Progress** : Today I experimented with domain to domain encoding, with a little bit of success. Because result code end up way different from AAE I split it to different class called DAAE (Domain based Adversarial Autoencoder)
+
+**Link of Work:**  [Commit]()
