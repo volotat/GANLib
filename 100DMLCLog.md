@@ -35,7 +35,7 @@
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/eadf7819fd1e309c70e461b30b808c4cf640fc28)
 
 
-## Day 5 : July 12 , 2018
+## Day 6 : July 12 , 2018
  
 **Today's Progress** : Cleaned up DAAE code and eventually improved results a lot by changing a way how discriminator work.
 
