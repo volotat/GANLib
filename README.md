@@ -50,5 +50,5 @@ gan.train(data, epochs=20000, batch_size=64, validation_split = 0.1) #train GAN 
 Generate new samples
 ```python
 noise = np.random.uniform(-1, 1, (gen_batch_size, gan.latent_dim))
-gen_imgs = gen.predict([noise])
+gen_imgs = gan.generator.predict([noise])
 ```
