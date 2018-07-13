@@ -8,6 +8,18 @@ import numpy as np
 from . import metrics
 
 
+#                   Generative Adversarial Network
+#   Paper: https://arxiv.org/pdf/1406.2661.pdf
+
+#       Description:
+#   Takes as input some dataset and by adversarial training two different 
+#   networks (generator and discriminator) learn to generate samples 
+#   that very similar to given dataset from random noise.
+
+#       To do:
+#   Get rid of modes because it does not really help
+
+
 class GAN():
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)

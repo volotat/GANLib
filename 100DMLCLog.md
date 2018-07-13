@@ -41,8 +41,9 @@
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/91139f51cb4fbe45e122df24aa92ea9dc6c394fb)
 
+
 ## Day 7 : July 13 , 2018
  
-**Today's Progress** : Turns out my DAAE works very similar to DiscoGAN so I renamed it. It a bit sad that this idea far away from new, on the other hand it is a good reminder to spend more time on research.  
+**Today's Progress** : Turns out my DAAE works very similar to DiscoGAN so I renamed it. It a bit sad that this idea far away from new, on the other hand it is a good reminder to spend more time on research. Also made small description for some GANs within source code.
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/eb2b06198b3cccde8bd7b7f1625850dc90cf6842)

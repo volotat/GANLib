@@ -7,6 +7,15 @@ import numpy as np
 
 from . import metrics
 
+#                   Conditional Generative Adversarial Network
+#   Paper: https://arxiv.org/pdf/1411.1784.pdf
+
+#       Description:
+#   Takes as input dataset and with it class labels and learn to generate samples 
+#   similar to original dataset specified by some given labels.
+
+#       To do:
+#   Get rid of modes because it does not really help
 
 class CGAN():
     def metric_test(self, set_data, set_labels, pred_num = 32):    

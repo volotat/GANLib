@@ -7,9 +7,9 @@ import numpy as np
 
 from . import metrics
 
-#                      DiscoGAN
+#                   DiscoGAN
 #   Paper: https://arxiv.org/pdf/1703.05192.pdf
-#
+
 #       Description:
 #   Takes as input two sets from different domains and by finding correlations 
 #   between them encode samples from one domain to another and backwards. 

@@ -12,7 +12,9 @@ from skimage.measure import block_reduce
 
 from . import metrics
 
-#Notes:
+
+
+#       To do:
 #   In original paper all weights remains trainable, but I need to make this optional
 #   Need to restrict data shape to power of 2
 #   Make channels on layers became smaller while growing or make it optional
@@ -20,6 +22,7 @@ from . import metrics
 #   Take model structure outside of the class
 #   Update train comment
 #   Need a way to save models and continue training after load
+#   Get rid of modes because it does not really help
 
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    
