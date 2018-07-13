@@ -1,4 +1,4 @@
-from GANLib import DAAE
+from GANLib import DiscoGAN
 from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
@@ -91,7 +91,7 @@ def sample_images(gen, file, dom_set):
     plt.close()
 
     
-img_path = 'DAAE'
+img_path = 'DiscoGAN'
     
 # Load the dataset
 (mnist_set, labels), (_, _) = mnist.load_data()
@@ -108,7 +108,7 @@ set_domain_B = fashion_set[:128]
 
 
 #Run GAN for 20000 iterations
-gan = DAAE(mnist_set.shape[1:], fashion_set.shape[1:])
+gan = DiscoGAN(mnist_set.shape[1:], fashion_set.shape[1:])
 gan.build_encoder = lambda self=gan: build_encoder(self)
 gan.build_decoder = lambda self=gan: build_decoder(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)

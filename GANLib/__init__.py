@@ -5,7 +5,7 @@ from . import metrics
 from . import plotter
 
 from .AAE import AAE
-from .DAAE import DAAE
+from .DiscoGAN import DiscoGAN
 from .GAN import GAN
 from .CGAN import CGAN
 from .ProgGAN import ProgGAN

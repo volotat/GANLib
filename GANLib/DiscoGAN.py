@@ -7,20 +7,24 @@ import numpy as np
 
 from . import metrics
 
-#                      Double Domain Adversarial Autoencoder
+#                      DiscoGAN
+#   Paper: https://arxiv.org/pdf/1703.05192.pdf
 #
+#       Description:
 #   Takes as input two sets from different domains and by finding correlations 
 #   between them encode samples from one domain to another and backwards. 
 #   In limit it suppose to find one to one bijection mapping between this sets.
 
+#       Note:
+#   Discriminator works in a bit different way that it described in the paper 
+#   simply because it shows better performance in my experiments.
 
 #       To do:
 #   Find a way how to split sets into train and test ones
 #   Define metric and make results of metric_test store in history
-#   Rename module
 
 
-class DAAE():
+class DiscoGAN():
     '''
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)

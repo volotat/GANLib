@@ -40,3 +40,9 @@
 **Today's Progress** : Cleaned up DAAE code and eventually improved results a lot by changing a way how discriminator work.
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/91139f51cb4fbe45e122df24aa92ea9dc6c394fb)
+
+## Day 7 : July 13 , 2018
+ 
+**Today's Progress** : Turns out my DAAE works very similar to DiscoGAN so I renamed it. It a bit sad that this idea anything but new, on the other hand it is a good reminder to spend more time on research.  
+
+**Link of Work:**  [Commit]()
