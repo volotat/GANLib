@@ -53,4 +53,4 @@
  
 **Today's Progress** : AAE and AAE_test code changed. Unfortunately it's still not working as it supposed to, at least not good enough. Also added descriptions for remaining GANs.  
 
-**Link of Work:**  [Commit]()
+**Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/35d9d23250f101b9fb3902b14297f36c3809d309)
