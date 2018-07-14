@@ -7,7 +7,6 @@ import numpy as np
 
 from . import metrics
 
-
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
 

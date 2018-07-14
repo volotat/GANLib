@@ -12,7 +12,12 @@ from skimage.measure import block_reduce
 
 from . import metrics
 
+#                   Progressive growing GAN
+#   Paper: https://arxiv.org/pdf/1710.10196.pdf
 
+#       Description:
+#   Takes as input some dataset and trains the network as usual GAN but progressively 
+#   adding layers to generator and discriminator.
 
 #       To do:
 #   In original paper all weights remains trainable, but I need to make this optional

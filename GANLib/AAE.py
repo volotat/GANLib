@@ -6,7 +6,17 @@ import numpy as np
 
 
 from . import metrics
-from keras.utils import plot_model   
+
+#                   Adversarial Autoencoder
+#   Paper: https://arxiv.org/pdf/1511.05644.pdf
+
+#       Description:
+#   T
+
+#       To do:
+#   Make it work properly
+#   Find a way how to split sets into train and test ones
+#   Get rid of modes because it does not really help
 
 class AAE():
     def metric_test(self, set, pred_num = 32):    
@@ -16,17 +26,16 @@ class AAE():
         org_set = set[n_indx]
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
-        gen_set = self.generator.predict([noise]) 
+        gen_set = self.encoder.predict([noise]) 
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, mode = 'vanilla'):
+    def __init__(self, input_shape, latent_dim = 100):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
-        self.mode = mode
         
         self.build_discriminator = None
-        self.build_generator = None
+        self.build_encoder = None
         self.build_decoder = None
         
         self.best_model = None
@@ -40,50 +49,53 @@ class AAE():
         if optimizer is None:
             optimizer = Adam(0.0002, 0.5)
     
-        if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
-            self.generator = load_model(path+'/generator.h5')
+        if os.path.isfile(path+'/encoder.h5') and os.path.isfile(path+'/discriminator.h5'):
+            self.encoder = load_model(path+'/encoder.h5')
             self.discriminator = load_model(path+'/discriminator.h5')
         else:
-            if self.build_discriminator is None or self.build_generator is None:
+            if self.build_discriminator is None or self.build_encoder is None or self.build_decoder is None:
                 raise Exception("Model building functions are not defined")
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss='mae', optimizer=optimizer)
-
-                # Build the generator
-                self.generator = self.build_generator()
+                self.discriminator.compile(loss='binary_crossentropy', optimizer=optimizer)
+                
+                # Build the encoder
+                self.encoder = self.build_encoder()
                 self.decoder = self.build_decoder()
 
-        # The generator takes noise and the target label as input
+        # The encoder takes noise and the target label as input
         # and generates the corresponding digit of that label
-        input_img = Input(shape=self.input_shape)
-        encod_img = self.generator([input_img])
+        
 
-        # For the combined model we will only train the generator
+        # For the combined model we will only train the encoder
         self.discriminator.trainable = False
 
         # The discriminator takes generated image as input and determines validity
         # and the label of that image
         
-        decode = self.decoder([encod_img])
-        valid = self.discriminator([encod_img])
+        
+        input_img = Input(shape=self.input_shape)
+        encod_img = self.encoder([input_img])
+        
+        decode = self.decoder(encod_img)
+        valid = self.discriminator(encod_img)
 
-        # The combined model  (stacked generator and discriminator)
-        # Trains generator to fool discriminator
-        input_img_ = Input(shape=self.input_shape)
-        #self.discriminator_val =  Model([input_img_], self.discriminator(input_img_)[1])
-        #self.discriminator_val.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+        # The combined model  (stacked encoder and discriminator)
+        # Trains encoder to fool discriminator
         
         self.combined = Model([input_img], [decode, valid])
-        self.combined.compile(loss='mae', optimizer=optimizer)
+        self.combined.compile(loss=['mse', 'binary_crossentropy'],
+            loss_weights=[0.5, 0.5],
+            optimizer=optimizer)
+            
         print('models builded')    
             
     def save(self):
-        self.generator.save('generator.h5')
+        self.encoder.save('encoder.h5')
         self.discriminator.save('discriminator.h5')
     
-    def train(self, domain_A_set, domain_B_set , batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -106,7 +118,7 @@ class AAE():
                 on this data at the end of each epoch.
                 The validation data is selected from the last samples.
             save_best_model:
-                Boolean. If True, generator weights will be resigned to best model according to chosen metric.
+                Boolean. If True, encoder weights will be resigned to best model according to chosen metric.
         # Returns
             A history object. 
         """ 
@@ -146,30 +158,26 @@ class AAE():
             # ---------------------
 
             # Select a random batch of images
-            idx_a = np.random.randint(0, domain_A_set.shape[0], batch_size)
-            idx_b = np.random.randint(0, domain_B_set.shape[0], batch_size)
-            domain_A_samples = domain_A_set[idx_a]
-            domain_B_samples = domain_B_set[idx_b]
+            idx = np.random.randint(0, data_set.shape[0], batch_size)
+            imgs = data_set[idx]
 
-            # Sample noise as generator input
-            #noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-            # Generate new images
-            
-            gen_imgs = self.generator.predict([domain_A_samples])
+            # Generate new latent representations
+            gen_lats = self.encoder.predict([imgs])
+            rnd_lats = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            #rnd_lats = np.random.normal(size=(batch_size, self.latent_dim))
             
             # Train the discriminator
-            d_loss_real = self.discriminator.train_on_batch(domain_B_samples, valid)
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, -valid)
+            d_loss_real = self.discriminator.train_on_batch(rnd_lats, valid)
+            d_loss_fake = self.discriminator.train_on_batch(gen_lats, fake)
             d_loss = (d_loss_real + d_loss_fake) / 2
             
             # ---------------------
-            #  Train Generator
+            #  Train encoder
             # ---------------------
             
-            # Train the generator
+            # Train the encoder
             
-            g_loss = self.combined.train_on_batch([domain_A_samples], [domain_A_samples, valid])
+            g_loss = self.combined.train_on_batch([imgs], [imgs, valid])
 
             # Plot the progress
             if epoch % checkpoint_range == 0:
@@ -201,7 +209,7 @@ class AAE():
                 history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
                 
                 if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                    self.best_model = self.generator.get_weights()
+                    self.best_model = self.encoder.get_weights()
                     self.best_metric = np.mean(metric)
                     history['best_metric'] = self.best_metric
                     
@@ -213,7 +221,7 @@ class AAE():
         
         
         if save_best_model:
-            self.generator.set_weights(self.best_model)    
+            self.encoder.set_weights(self.best_model)    
             
         self.epoch = epochs
         checkpoint_callback()   
