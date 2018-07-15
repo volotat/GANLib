@@ -11,12 +11,14 @@ from . import metrics
 #   Paper: https://arxiv.org/pdf/1511.05644.pdf
 
 #       Description:
-#   T
+#   Attach discriminator to autoencoder in oder to make decoder produce 
+#   realistic samples from random noise and make encoder generate  more
+#   useful latent representation of data. 
 
 #       To do:
-#   Make it work properly
 #   Find a way how to split sets into train and test ones
 #   Get rid of modes because it does not really help
+#   Insert mu, log, Lambda layers inside class
 
 class AAE():
     def metric_test(self, set, pred_num = 32):    
@@ -85,9 +87,7 @@ class AAE():
         # Trains encoder to fool discriminator
         
         self.combined = Model([input_img], [decode, valid])
-        self.combined.compile(loss=['mse', 'binary_crossentropy'],
-            loss_weights=[0.5, 0.5],
-            optimizer=optimizer)
+        self.combined.compile(loss=['mse', 'binary_crossentropy'], loss_weights=[0.5, 0.5], optimizer=optimizer)
             
         print('models builded')    
             
@@ -177,18 +177,14 @@ class AAE():
             
             # Train the encoder
             
-            g_loss = self.combined.train_on_batch([imgs], [imgs, valid])
+            g_loss = self.combined.train_on_batch([imgs], [imgs, valid])[0]
 
             # Plot the progress
             if epoch % checkpoint_range == 0:
-                print(epoch)
+                gen_val = self.discriminator.predict([gen_lats])
+                train_val = self.discriminator.predict([rnd_lats])
+                
                 '''
-                gen_val = self.discriminator.predict([gen_imgs])
-                
-                #idx = np.random.randint(0, train_set.shape[0], batch_size)
-                #train_val = self.discriminator.predict(train_set[idx])
-                train_val = self.discriminator.predict([imgs])
-                
                 if valid_set is not None: 
                     idx = np.random.randint(0, valid_set.shape[0], batch_size)
                     test_val = self.discriminator.predict(valid_set[idx])
@@ -197,16 +193,17 @@ class AAE():
                 
                 noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
                 cont_val = self.discriminator.predict(noise)
-                
-                metric = self.metric_test(train_set, 1000)
+                 '''
+                test_val = np.zeros(1)
+                metric = np.zeros(1) #self.metric_test(train_set, 1000)
                 print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                
+               
                 hist_size = history['hist_size'] = history['hist_size']+1
                 history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
                 history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                #history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                #history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
+                #history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
                 
                 if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
                     self.best_model = self.encoder.get_weights()
@@ -214,7 +211,7 @@ class AAE():
                     history['best_metric'] = self.best_metric
                     
                 self.history = history
-                '''
+                
                 if checkpoint_callback is not None:
                     checkpoint_callback()
         

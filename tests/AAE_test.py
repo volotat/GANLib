@@ -2,18 +2,19 @@ from GANLib import AAE
 from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate
+from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, Lambda
 from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Model
 from keras.optimizers import Adam, RMSprop, Nadam
+import keras.backend as K
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-noise_dim = 64
+noise_dim = 10
 
 def build_encoder(self):
     input_img = Input(shape=self.input_shape)
@@ -26,7 +27,14 @@ def build_encoder(self):
     layer = Dense(128)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    latent = Dense(64)(layer)
+    #latent = Dense(self.latent_dim, activation = 'linear')(layer)
+    mu = Dense(self.latent_dim)(layer)
+    log = Dense(self.latent_dim)(layer)
+        
+    lat_layer = Lambda(lambda p: p[0] + K.random_normal(K.shape(p[0])) * K.exp(p[1] / 2),
+                output_shape=lambda p: p[0])
+        
+    latent = lat_layer([mu, log])
     return Model(input_img, latent)
     
 def build_decoder(self):
@@ -48,10 +56,10 @@ def build_discriminator(self):
     input_lat = Input(shape=(self.latent_dim,))
     
     layer = input_lat
-    layer = Dense(256)(layer)
+    layer = Dense(128)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    layer = Dense(128)(layer)
+    layer = Dense(64)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
     validity = Dense(1, activation = 'sigmoid')(layer)
@@ -65,7 +73,7 @@ def sample_images(gen, file):
     r, c = 5, 5
     
     noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-
+    #noise = np.random.normal(size=(r * c, noise_dim))
     gen_imgs = gen.predict(noise)
 
     # Rescale images 0 - 1
@@ -105,6 +113,6 @@ gan.build_models()
 def callback():
     path = 'images/'+img_path+'/'
     sample_images(gan.decoder, path+'decoded.png')
-    #plotter.save_hist_image(gan.history, path+'_hist.png')
+    plotter.save_hist_image(gan.history, path+'History.png')
     
 gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    
