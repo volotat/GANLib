@@ -22,7 +22,7 @@ def build_generator(self):
     input_lat = Input(shape=(self.latent_dim,))
     
     layer = Dense(256, activation = 'relu')(input_lat)
-    layer = Dense(784, activation = 'relu')(layer)
+    layer = Dense(784, activation = 'linear')(layer)
     img = Reshape((28,28,1))(layer)
 
     return Model(input_lat, img)
