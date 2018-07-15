@@ -52,3 +52,11 @@ Generate new samples
 noise = np.random.uniform(-1, 1, (gen_batch_size, gan.latent_dim))
 gen_imgs = gan.generator.predict([noise])
 ```
+
+
+#### Current progress for each module:
+GAN: competted  
+CGAN: competted  
+DiscoGAN: works as supposed to, but not store all necessary history  
+AAE: in progress  
+ProgGAN: in progress  
