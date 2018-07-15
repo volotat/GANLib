@@ -60,5 +60,5 @@
  
 **Today's Progress** : AAE now working correctly and store some of training history.  
 
-**Link of Work:**  [Commit]()
+**Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a4839920a56b689ad8c6e7864b0ec00c30f7b6b2)
 
