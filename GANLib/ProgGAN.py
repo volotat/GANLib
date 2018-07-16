@@ -27,7 +27,7 @@ from . import metrics
 #   Take model structure outside of the class
 #   Update train comment
 #   Need a way to save models and continue training after load
-#   Get rid of modes because it does not really help
+#   Make stable mode works properly 
 
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    

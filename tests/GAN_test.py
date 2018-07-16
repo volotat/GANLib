@@ -57,7 +57,7 @@ class conv_model_28():
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
-        validity = Dense(1, activation='sigmoid')(layer)
+        validity = Dense(1, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
           
 class conv_model_32(): 
@@ -105,7 +105,7 @@ class conv_model_32():
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
-        validity = Dense(1, activation='sigmoid')(layer)
+        validity = Dense(1, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
         
         

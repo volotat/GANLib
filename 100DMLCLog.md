@@ -62,3 +62,10 @@
 
 **Link of Work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a4839920a56b689ad8c6e7864b0ec00c30f7b6b2)
 
+
+## Day 10 : July 16 , 2018
+ 
+**Today's Progress** : Changed a way how stable mode works for GAN and CGAN. Now it actually produce much better results for GAN and roughly the same for CGAN but faster.
+
+**Link of Work:**  [Commit]()
+

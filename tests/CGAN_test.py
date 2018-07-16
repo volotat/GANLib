@@ -60,7 +60,7 @@ class conv_model_28():
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
-        validity = Dense(1, activation='sigmoid')(layer)
+        validity = Dense(1, activation=self.disc_activation)(layer)
         return Model([input_img, input_lbl], validity)    
 
 class dense_model(): 
@@ -97,7 +97,7 @@ class dense_model():
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
-        validity = Dense(1, activation='sigmoid')(layer)
+        validity = Dense(1, activation=self.disc_activation)(layer)
         
         return Model(input_img, validity) 
           
@@ -146,7 +146,7 @@ class conv_model_32():
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         
-        validity = Dense(1, activation='sigmoid')(layer)
+        validity = Dense(1, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
         
         
@@ -166,7 +166,8 @@ def sample_images(gen, file):
     
     noise = np.random.uniform(-1, 1, (r * c, noise_dim))
     labels = np.zeros((r*c,10))
-    labels[:, 8] = 1.
+    for i in range(r):
+        labels[i::r, i] = 1.
 
     gen_imgs = gen.predict([noise, labels])
 

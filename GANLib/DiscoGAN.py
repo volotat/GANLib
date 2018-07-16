@@ -167,8 +167,8 @@ class DiscoGAN():
             gen_b = self.encoder.predict([domain_A_samples])
             gen_a = self.decoder.predict([domain_B_samples])
             
-            d_loss_fake = self.discriminator.train_on_batch([gen_a, gen_b], fake)
             d_loss_real = self.discriminator.train_on_batch([domain_A_samples, domain_B_samples], valid)
+            d_loss_fake = self.discriminator.train_on_batch([gen_a, gen_b], fake)
             d_loss = (d_loss_real + d_loss_fake) / 2
             
             # ---------------------

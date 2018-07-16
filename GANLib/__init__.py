@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 from . import metrics
 from . import plotter
+from . import utils
 
 from .AAE import AAE
 from .CGAN import CGAN

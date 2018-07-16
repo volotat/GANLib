@@ -6,6 +6,7 @@ import numpy as np
 
 
 from . import metrics
+from . import utils
 
 #                   Conditional Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1411.1784.pdf
@@ -13,9 +14,6 @@ from . import metrics
 #       Description:
 #   Takes as input dataset and with it class labels and learn to generate samples 
 #   similar to original dataset specified by some given labels.
-
-#       To do:
-#   Get rid of modes because it does not really help
 
 class CGAN():
     def metric_test(self, set_data, set_labels, pred_num = 32):    
@@ -49,6 +47,14 @@ class CGAN():
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
             optimizer = Adam(0.0002, 0.5)
+            
+        if self.mode == 'stable':
+            loss = 'logcosh'
+            self.disc_activation = 'linear'
+        elif self.mode == 'vanilla':
+            loss = 'binary_crossentropy'
+            self.disc_activation = 'sigmoid'
+        else: raise Exception("Mode '" + self.mode+ "' is unknown")
     
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
@@ -59,7 +65,7 @@ class CGAN():
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+                self.discriminator.compile(loss=loss, optimizer=optimizer)
 
                 # Build the generator
                 self.generator = self.build_generator()
@@ -80,7 +86,7 @@ class CGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         self.combined = Model([noise, label], valid)
-        self.combined.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+        self.combined.compile(loss=loss, optimizer=optimizer)
             
         print('models builded')   
             
@@ -180,12 +186,12 @@ class CGAN():
 
                 # Validate how good generated images looks like
                 val = self.discriminator.predict([gen_imgs,labels])
-                crit = 1. - np.abs(1. - val) ** 0.5
+                crit = utils.Gravity(val, boundaries = [-1,1])
                 
                 # Train the discriminator
                 d_loss_real = self.discriminator.train_on_batch([imgs,labels], valid)
                 d_loss_fake = self.discriminator.train_on_batch([gen_imgs,labels], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs, trash_labels], fake)
+                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs, trash_labels], -valid)
                 d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
             elif self.mode == 'vanilla':
                 d_loss_real = self.discriminator.train_on_batch([imgs,labels], valid)

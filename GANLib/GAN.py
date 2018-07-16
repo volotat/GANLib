@@ -6,6 +6,7 @@ import numpy as np
 
 
 from . import metrics
+from . import utils
 
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
@@ -14,9 +15,6 @@ from . import metrics
 #   Takes as input some dataset and by adversarial training two different 
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
-
-#       To do:
-#   Get rid of modes because it does not really help
 
 
 class GAN():
@@ -48,6 +46,16 @@ class GAN():
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
             optimizer = Adam(0.0002, 0.5)
+            
+        if self.mode == 'stable':
+            loss = 'logcosh'
+            self.disc_activation = 'linear'
+        elif self.mode == 'vanilla':
+            loss = 'binary_crossentropy'
+            self.disc_activation = 'sigmoid'
+        else: raise Exception("Mode '" + self.mode+ "' is unknown")
+        
+        print(loss, self.disc_activation)
     
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
@@ -58,7 +66,7 @@ class GAN():
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+                self.discriminator.compile(loss=loss, optimizer=optimizer)
 
                 # Build the generator
                 self.generator = self.build_generator()
@@ -78,7 +86,7 @@ class GAN():
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         self.combined = Model([noise], valid)
-        self.combined.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+        self.combined.compile(loss=loss, optimizer=optimizer)
             
         print('models builded')    
             
@@ -162,12 +170,12 @@ class GAN():
 
                 # Validate how good generated images looks like
                 val = self.discriminator.predict([gen_imgs])
-                crit = 1. - np.abs(1. - val) ** 0.5
+                crit = utils.Gravity(val, boundaries = [-1,1])
                 
                 # Train the discriminator
                 d_loss_real = self.discriminator.train_on_batch([imgs], valid)
                 d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], fake)
+                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
                 d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
                 
             elif self.mode == 'vanilla':
