@@ -74,5 +74,5 @@
  
 **Today's progress** : Update stable mode for Progressive GAN, models moved out of class.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5ae9a42c6937b834af1ac97be0cac1c710bdb0d3), [Commit](https://github.com/Mylittlerapture/GANLib/commit/4c30d088003219506f1dbea7cd778df77a3e623a)
 
