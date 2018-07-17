@@ -1,7 +1,3 @@
-from keras.layers import Input, Dense, Reshape, Flatten, RepeatVector, AveragePooling2D, UpSampling2D
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.convolutional import Conv2D
-
 from keras.layers import Input
 from keras.models import Model, load_model
 from keras.optimizers import Adam
@@ -11,6 +7,7 @@ import numpy as np
 from skimage.measure import block_reduce
 
 from . import metrics
+from . import utils
 
 #                   Progressive growing GAN
 #   Paper: https://arxiv.org/pdf/1710.10196.pdf
@@ -24,10 +21,8 @@ from . import metrics
 #   Need to restrict data shape to power of 2
 #   Make channels on layers became smaller while growing or make it optional
 #   Make epochs_grow_rate automatic, and also spend less time while network is small
-#   Take model structure outside of the class
 #   Update train comment
 #   Need a way to save models and continue training after load
-#   Make stable mode works properly 
 
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    
@@ -66,55 +61,17 @@ class ProgGAN():
         self.genr_weights = []
         self.disc_weights = []
 
-        
-    def generator_body(self, input_layer):
-        layer = input_layer
-        for i in range(self.layers):
-            layer = UpSampling2D(2)(layer)
-            layer = Conv2D(64, (3,3), padding='same', weights = self.genr_weights[i], name = 'genr_layer_'+str(i))(layer)
-            layer = LeakyReLU(alpha=0.2)(layer) 
-        return layer
-    
-    def discriminator_body(self, input_layer):
-        layer = input_layer
-        for i in range(self.layers):
-            layer = Conv2D(64, (3,3), padding='same', weights = self.disc_weights[i], name = 'disc_layer_'+str(i))(layer)
-            layer = LeakyReLU(alpha=0.2)(layer)
-            layer = AveragePooling2D(2)(layer)
-        return layer  
-
-    def build_generator(self):
-        input_layer = Input(shape=(self.latent_dim,))
-        layer = RepeatVector(16)(input_layer)
-        layer = Reshape((4, 4, self.latent_dim))(layer)
-        
-        layer = Conv2D(self.latent_dim, (4,4), padding='same', weights = self.genr_head_weights, name = 'genr_head')(layer)
-        layer = LeakyReLU(alpha=0.2)(layer) 
-        
-        layer = self.generator_body(layer)
-        
-        layer = Conv2D(3, (1,1))(layer)
-        return Model(input_layer, layer)
-        
-    def build_discriminator(self):
-        input_layer = Input(shape=self.inp_shape)
-        layer = input_layer
-        
-        layer = Conv2D(64, (1,1))(layer)
-        layer = LeakyReLU(alpha=0.2)(layer) 
-        
-        layer = self.discriminator_body(layer)
-        
-        layer = Conv2D(self.latent_dim, (4,4), padding='valid', weights = self.disc_head_weights, name = 'disc_head')(layer)
-        layer = LeakyReLU(alpha=0.2)(layer) 
-        layer = Flatten()(layer)
-        layer = Dense(1, activation='sigmoid')(layer)
-        
-        return Model(input_layer, layer)
-        
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
             optimizer = Adam(0.0002, 0.5)
+            
+        if self.mode == 'stable':
+            loss = 'logcosh'
+            self.disc_activation = 'linear'
+        elif self.mode == 'vanilla':
+            loss = 'binary_crossentropy'
+            self.disc_activation = 'sigmoid'
+        else: raise Exception("Mode '" + self.mode+ "' is unknown")
     
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
@@ -125,7 +82,7 @@ class ProgGAN():
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+                self.discriminator.compile(loss=loss, optimizer=optimizer)
 
                 # Build the generator
                 self.generator = self.build_generator()
@@ -145,7 +102,7 @@ class ProgGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         self.combined = Model([noise], valid)
-        self.combined.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+        self.combined.compile(loss=loss, optimizer=optimizer)
             
         print('models builded')        
     
@@ -153,7 +110,7 @@ class ProgGAN():
         self.generator.save('generator.h5')
         self.discriminator.save('discriminator.h5')
     
-    def train(self, data_set, batch_size=32, epochs=1, epochs_grow_rate = 1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -180,6 +137,8 @@ class ProgGAN():
         # Returns
             A history object. 
         """ 
+        grow_epochs = [2000, 4000, 8000]
+        
         data_set_org = data_set.copy()
         
         def setup():
@@ -223,7 +182,7 @@ class ProgGAN():
             # Grow Network
             # ---------------------
             
-            if epoch%epochs_grow_rate == epochs_grow_rate-1:
+            if epoch in grow_epochs:
                 if self.inp_shape != self.input_shape:
                     self.genr_head_weights = self.generator.get_layer('genr_head').get_weights()
                     self.disc_head_weights = self.discriminator.get_layer('disc_head').get_weights()
@@ -260,12 +219,12 @@ class ProgGAN():
 
                 # Validate how good generated images looks like
                 val = self.discriminator.predict([gen_imgs])
-                crit = 1. - np.abs(1. - val) ** 0.5
+                crit = utils.Gravity(val, boundaries = [-1,1])
                 
                 # Train the discriminator
                 d_loss_real = self.discriminator.train_on_batch([imgs], valid)
                 d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], fake)
+                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
                 d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
                 
             elif self.mode == 'vanilla':

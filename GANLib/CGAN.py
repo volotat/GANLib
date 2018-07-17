@@ -12,7 +12,7 @@ from . import utils
 #   Paper: https://arxiv.org/pdf/1411.1784.pdf
 
 #       Description:
-#   Takes as input dataset and with it class labels and learn to generate samples 
+#   Takes as input dataset with it class labels and learn to generate samples 
 #   similar to original dataset specified by some given labels.
 
 class CGAN():

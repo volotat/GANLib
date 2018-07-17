@@ -69,3 +69,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5d4a42bb09972159ddc2ff5bf45664d7752f174a)
 
+
+## Day 11 : July 17 , 2018
+ 
+**Today's progress** : Update stable mode for Progressive GAN, models moved out of class.
+
+**Link to work:**  [Commit]()
+
