@@ -81,5 +81,5 @@
  
 **Today's progress** : Fixed savings and verbosity mode for every module. Small improvements in ProgGAN.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/52bc82b91e3232e5e85e6c4cdf07649bd8301e15)
 
