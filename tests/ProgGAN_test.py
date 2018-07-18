@@ -81,7 +81,7 @@ def sample_images(gen, file):
     
     
 img_path = 'ProgGAN'
-mode = 'stable'
+mode = 'vanilla'
     
 # Load the dataset
 (X_train, labels), (_, _) = cifar10.load_data()
@@ -106,4 +106,4 @@ def callback():
     sample_images(gan.generator, path+'.png')
     plotter.save_hist_image(gan.history, path+'_hist.png')
     
-gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs=20000, grow_epochs = [1000, 3000, 8000], batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    

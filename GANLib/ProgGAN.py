@@ -20,7 +20,6 @@ from . import utils
 #   In original paper all weights remains trainable, but I need to make this optional
 #   Need to restrict data shape to power of 2
 #   Make channels on layers became smaller while growing or make it optional
-#   Make epochs_grow_rate automatic, and also spend less time while network is small
 #   Update train comment
 #   Need a way to save models and continue training after load
 
@@ -73,6 +72,7 @@ class ProgGAN():
             self.disc_activation = 'sigmoid'
         else: raise Exception("Mode '" + self.mode+ "' is unknown")
     
+        self.path = path
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
             self.discriminator = load_model(path+'/discriminator.h5')
@@ -107,10 +107,10 @@ class ProgGAN():
         print('models builded')        
     
     def save(self):
-        self.generator.save('generator.h5')
-        self.discriminator.save('discriminator.h5')
+        self.generator.save(self.path+'/generator.h5')
+        self.discriminator.save(self.path+'/discriminator.h5')
     
-    def train(self, data_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, grow_epochs = [], verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -119,6 +119,8 @@ class ProgGAN():
                 Number of samples per gradient update.
             epochs: Number of epochs to train the model.
                 An epoch is an iteration over batch sized samples of dataset.
+            grow_epochs: List of epochs indexes in witch networks will grow 
+                new layers if it's possible
             checkpoint_range:
                 Range in witch checkpoint callback will be called and history data will be stored.
             verbose: 
@@ -137,7 +139,6 @@ class ProgGAN():
         # Returns
             A history object. 
         """ 
-        grow_epochs = [2000, 4000, 8000]
         
         data_set_org = data_set.copy()
         
@@ -259,7 +260,8 @@ class ProgGAN():
                 cont_val = self.discriminator.predict(noise)
                 
                 metric = self.metric_test(train_set, 1000)
-                print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                if verbose:
+                    print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
                 
                 hist_size = history['hist_size'] = history['hist_size']+1
                 history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)

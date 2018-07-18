@@ -55,8 +55,8 @@ class GAN():
             self.disc_activation = 'sigmoid'
         else: raise Exception("Mode '" + self.mode+ "' is unknown")
         
-        print(loss, self.disc_activation)
     
+        self.path = path
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
             self.discriminator = load_model(path+'/discriminator.h5')
@@ -91,10 +91,10 @@ class GAN():
         print('models builded')    
             
     def save(self):
-        self.generator.save('generator.h5')
-        self.discriminator.save('discriminator.h5')
+        self.generator.save(self.path+'/generator.h5')
+        self.discriminator.save(self.path+'/discriminator.h5')
     
-    def train(self, data_set, batch_size=32, epochs=1, verbose=1, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -210,7 +210,9 @@ class GAN():
                 cont_val = self.discriminator.predict(noise)
                 
                 metric = self.metric_test(train_set, 1000)
-                print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                
+                if verbose:
+                    print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
                 
                 hist_size = history['hist_size'] = history['hist_size']+1
                 history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
