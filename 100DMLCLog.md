@@ -79,7 +79,7 @@
 
 ## Day 12 : July 18 , 2018
  
-**Today's progress** : Fixed savings and verbosity mode for every module. 
+**Today's progress** : Fixed savings and verbosity mode for every module. Small improvements in ProgGAN.
 
 **Link to work:**  [Commit]()
 
