@@ -9,12 +9,17 @@ from skimage.measure import block_reduce
 from . import metrics
 from . import utils
 
-#                   Progressive growing GAN
+#                   Progressively growing GAN
 #   Paper: https://arxiv.org/pdf/1710.10196.pdf
 
 #       Description:
 #   Takes as input some dataset and trains the network as usual GAN but progressively 
 #   adding layers to generator and discriminator.
+
+#       Notes:
+#   Pixelwise normalization, minibatch stddev and other "tricks" from paper realized 
+#   outside of the class in utils module. The reason is they are more related to internal 
+#   model structure than overall algorithm and GANLib allows specified whatever model you want.
 
 #       To do:
 #   In original paper all weights remains trainable, but I need to make this optional
@@ -22,7 +27,11 @@ from . import utils
 #   Make channels on layers became smaller while growing or make it optional
 #   Update train comment
 #   Need a way to save models and continue training after load
-
+#   Realize smooth transition after growing as it is in paper
+#   Realize minibatch_stddev
+#   Realize minibatch discriminator
+#   Need always conduct metric test on original dataset, but scale up model predictions if necessary
+ 
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -32,6 +41,9 @@ class ProgGAN():
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
         gen_set = self.generator.predict([noise]) 
+        scale = org_set.shape[1] // gen_set.shape[1]
+        gen_set = UpSample2D(gen_set, scale)
+        
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr   
 
@@ -53,12 +65,14 @@ class ProgGAN():
         sz = 2 ** (self.layers + 2)
         self.inp_shape = (sz,sz,3)
         
-        
+        self.weights = {}
+        '''
         self.genr_head_weights = None
         self.disc_head_weights = None
         
         self.genr_weights = []
         self.disc_weights = []
+        '''
 
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
@@ -185,13 +199,13 @@ class ProgGAN():
             
             if epoch in grow_epochs:
                 if self.inp_shape != self.input_shape:
-                    self.genr_head_weights = self.generator.get_layer('genr_head').get_weights()
-                    self.disc_head_weights = self.discriminator.get_layer('disc_head').get_weights()
-                    for i in range(self.layers):
-                        self.genr_weights[i] = self.generator.get_layer('genr_layer_'+str(i)).get_weights()
-                        self.disc_weights[i] = self.discriminator.get_layer('disc_layer_'+str(i)).get_weights()
-                    self.genr_weights.append(None)
-                    self.disc_weights.append(None)
+                    
+                    for l in self.generator.layers:
+                        self.weights[l.name] = l.get_weights()
+                        
+                    for l in self.discriminator.layers:
+                        self.weights[l.name] = l.get_weights()   
+                    
                     self.layers += 1
                     sz = 2 ** (self.layers + 2)
                     self.inp_shape = (sz,sz,3)
@@ -259,7 +273,7 @@ class ProgGAN():
                 noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
                 cont_val = self.discriminator.predict(noise)
                 
-                metric = self.metric_test(train_set, 1000)
+                metric = self.metric_test(data_set, 1000)
                 if verbose:
                     print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
                 

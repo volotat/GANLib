@@ -1,3 +1,5 @@
+from keras import backend as K
+from keras.engine.topology import Layer
 import numpy as np
 
 def Gravity(x, boundaries = [0,1], pressure = 0.5):
@@ -8,14 +10,41 @@ def Gravity(x, boundaries = [0,1], pressure = 0.5):
     return res
 
 
+    
+# ---------------
+#  Layers
+# ---------------
+    
+#Pixelwise feature vector normalization layer from "Progressive Growing of GANs" paper
+class PixelNorm(Layer): #It will work only if channels are last in order! I have to do something with it.
+    def __init__(self, **kwargs):
+        super(PixelNorm, self).__init__(**kwargs)
 
+    def build(self, input_shape):
+        self.epsilon = 1e-8
+        super(PixelNorm, self).build(input_shape)
 
+    def call(self, x, *args, **kwargs):
+        return x / K.sqrt(K.mean(K.square(x), axis=-1, keepdims=True) + self.epsilon)
 
-
-
-
-
-
+    def compute_output_shape(self, input_shape):
+        return input_shape
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 # -------------------
 #  Constructor
 # -------------------

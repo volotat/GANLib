@@ -1,5 +1,6 @@
 from GANLib import ProgGAN
 from GANLib import plotter
+from GANLib import utils
 
 from keras.datasets import mnist, fashion_mnist, cifar10
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, RepeatVector, UpSampling2D
@@ -12,43 +13,59 @@ from keras.optimizers import Adam, RMSprop, Nadam
 import matplotlib.pyplot as plt
 import numpy as np
 
+from keras.utils import plot_model
+
+
+def new_sheet(self, filters, kernel_size, padding, name):
+    def func(layer):
+        layer = Conv2D(filters, kernel_size, padding=padding, weights = self.weights.get(name,None), name = name)(layer)
+        layer = LeakyReLU(alpha=0.2)(layer) 
+        return layer
+    return func
 
 def build_generator(self):
     input_layer = Input(shape=(self.latent_dim,))
     layer = RepeatVector(16)(input_layer)
     layer = Reshape((4, 4, self.latent_dim))(layer)
     
-    layer = Conv2D(self.latent_dim, (4,4), padding='same', weights = self.genr_head_weights, name = 'genr_head')(layer)
-    layer = LeakyReLU(alpha=0.2)(layer) 
+    layer = new_sheet(self, 64, (4,4), 'same', 'genr_head_0')(layer)
+    layer = utils.PixelNorm()(layer)
+    layer = new_sheet(self, 64, (3,3), 'same', 'genr_head_1')(layer)
+    layer = utils.PixelNorm()(layer)
     
     #Growing layers
     for i in range(self.layers):
         layer = UpSampling2D(2)(layer)
-        layer = Conv2D(64, (3,3), padding='same', weights = self.genr_weights[i], name = 'genr_layer_'+str(i))(layer)
-        layer = LeakyReLU(alpha=0.2)(layer) 
+        
+        layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
+        layer = utils.PixelNorm()(layer)
+        layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
+        layer = utils.PixelNorm()(layer)
     
-    
-    layer = Conv2D(3, (1,1))(layer)
+    layer = Conv2D(3, (1,1), name = 'to_rgb')(layer) #to RGB
     return Model(input_layer, layer)
     
 def build_discriminator(self):
     input_layer = Input(shape=self.inp_shape)
     layer = input_layer
     
-    layer = Conv2D(64, (1,1))(layer)
+    layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
+    
     
     #Growing layers
-    for i in range(self.layers):
-        layer = Conv2D(64, (3,3), padding='same', weights = self.disc_weights[i], name = 'disc_layer_'+str(i))(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
+    for i in range(self.layers, 0, -1):
+        layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
+        layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
     
-    layer = Conv2D(self.latent_dim, (4,4), padding='valid', weights = self.disc_head_weights, name = 'disc_head')(layer)
-    layer = LeakyReLU(alpha=0.2)(layer) 
+    
+    #layer = minibatch_stddev(inputs, group_size=4)(layer)
+    layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
+    layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
+    
     layer = Flatten()(layer)
     layer = Dense(1, activation=self.disc_activation)(layer)
-    
     return Model(input_layer, layer)
 
 
