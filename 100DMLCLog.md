@@ -88,5 +88,5 @@
  
 **Today's progress** : Changed a way of storing weights and fix metric test in ProgGAN. Added Pixelwise normalization layer to utils and way of using it to ProgGAN_test.py 
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/818bdb9c8a76dd6f4995d043622652a0eba55d25)
 
