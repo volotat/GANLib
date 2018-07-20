@@ -95,5 +95,5 @@
  
 **Today's progress** :  Metric test in ProgGAN fixed again. Added MiniBatchStddev layer from ProgGAN paper.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/1e4345c1b6d4b0f4f984943c1ca51651bfeeb601)
 
