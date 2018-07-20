@@ -90,3 +90,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/818bdb9c8a76dd6f4995d043622652a0eba55d25)
 
+
+## Day 14 : July 20 , 2018
+ 
+**Today's progress** :  Metric test in ProgGAN fixed again. Added MiniBatchStddev layer from ProgGAN paper.
+
+**Link to work:**  [Commit]()
+

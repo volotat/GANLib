@@ -28,9 +28,10 @@ from . import utils
 #   Update train comment
 #   Need a way to save models and continue training after load
 #   Realize smooth transition after growing as it is in paper
-#   Realize minibatch_stddev
 #   Realize minibatch discriminator
 #   Need always conduct metric test on original dataset, but scale up model predictions if necessary
+
+#   Add He's initialization to trainable layers and improved Wasserstein loss to models
  
 class ProgGAN():
     def metric_test(self, set, pred_num = 32):    
@@ -42,7 +43,7 @@ class ProgGAN():
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
         gen_set = self.generator.predict([noise]) 
         scale = org_set.shape[1] // gen_set.shape[1]
-        gen_set = UpSample2D(gen_set, scale)
+        gen_set = gen_set.repeat(scale, axis = 1).repeat(scale, axis = 2)
         
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr   

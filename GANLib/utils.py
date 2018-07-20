@@ -32,8 +32,33 @@ class PixelNorm(Layer): #It will work only if channels are last in order! I have
         
         
         
+#MiniBatchStddev layer from "Progressive Growing of GANs" paper        
+class MiniBatchStddev(Layer): #not sure if it's works correctly yet...
+    def __init__(self, group_size=1, **kwargs):
+        self.group_size = group_size
+        super(MiniBatchStddev, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        #self.input_spec = tf.keras.layers.InputSpec('float32', input_shape)
+        super(MiniBatchStddev, self).build(input_shape)
+
+    def call(self, x, *args, **kwargs):
+        _, h, w, c =  x.shape #self.input_spec.shape
+        # gs = K.maximum(self.group_size, self.input_spec.shape[0])
+        gs = self.group_size
+        _x = K.reshape(x, (gs, -1, h, w, c))
+        _x -= K.mean(_x, axis=0, keepdims=True)
+        _x = K.mean(K.square(_x), axis=0)
+        _x = K.sqrt(_x + K.epsilon())
+        _x = K.sum(_x, axis=[1, 2, 3], keepdims=True)
         
-        
+        _x = K.tile(_x, [gs, h, w, 1])
+        #_x = tf.tile(_x, [gs, h, w, 1])
+        _x = K.concatenate([x, _x], axis=-1)
+        return _x
+
+    def compute_output_shape(self, input_shape):
+        return (*input_shape[:3], input_shape[3]+1)        
         
         
         

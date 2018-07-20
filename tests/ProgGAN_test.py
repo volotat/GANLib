@@ -52,7 +52,6 @@ def build_discriminator(self):
     layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     
-    
     #Growing layers
     for i in range(self.layers, 0, -1):
         layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
@@ -60,7 +59,7 @@ def build_discriminator(self):
         layer = AveragePooling2D(2)(layer)
     
     
-    #layer = minibatch_stddev(inputs, group_size=4)(layer)
+    layer = utils.MiniBatchStddev(group_size=4)(layer)
     layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
     layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
     
