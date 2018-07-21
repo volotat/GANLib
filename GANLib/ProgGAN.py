@@ -28,7 +28,6 @@ from . import utils
 #   Update train comment
 #   Need a way to save models and continue training after load
 #   Realize smooth transition after growing as it is in paper
-#   Realize minibatch discriminator
 #   Need always conduct metric test on original dataset, but scale up model predictions if necessary
 
 #   Add He's initialization to trainable layers and improved Wasserstein loss to models
@@ -178,8 +177,9 @@ class ProgGAN():
         train_set, valid_set, data_set_std, data_set_mean = setup()
     
         # Adversarial ground truths
-        valid = np.ones((batch_size, 1))
-        fake = np.zeros((batch_size, 1))
+        out_shape = self.discriminator.output_shape
+        valid = np.ones((batch_size,) + out_shape[1:])
+        fake = np.zeros((batch_size,) + out_shape[1:])
 
         #mean min max
         max_hist_size = epochs//checkpoint_range + 1
@@ -244,8 +244,8 @@ class ProgGAN():
                 d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
                 
             elif self.mode == 'vanilla':
-                d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
+                d_loss_real = self.discriminator.train_on_batch(imgs, valid) #valid
+                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake) #fake
                 d_loss = (d_loss_real + d_loss_fake) / 2
                 
             else: raise Exception("Mode '" + self.mode+ "' is unknown")
@@ -255,7 +255,7 @@ class ProgGAN():
             # ---------------------
             
             # Train the generator
-            g_loss = self.combined.train_on_batch([noise], valid)
+            g_loss = self.combined.train_on_batch([noise], valid) #valid
 
             # Plot the progress
             if epoch % checkpoint_range == 0:

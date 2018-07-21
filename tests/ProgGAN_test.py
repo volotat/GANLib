@@ -3,8 +3,8 @@ from GANLib import plotter
 from GANLib import utils
 
 from keras.datasets import mnist, fashion_mnist, cifar10
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, RepeatVector, UpSampling2D
-from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D, AveragePooling2D
+from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, add, RepeatVector, UpSampling2D
+from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D, AveragePooling2D, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Model
@@ -24,6 +24,10 @@ def new_sheet(self, filters, kernel_size, padding, name):
     return func
 
 def build_generator(self):
+    a = 0.1
+    previous_step = None
+    next_step = None
+
     input_layer = Input(shape=(self.latent_dim,))
     layer = RepeatVector(16)(input_layer)
     layer = Reshape((4, 4, self.latent_dim))(layer)
@@ -36,14 +40,27 @@ def build_generator(self):
     #Growing layers
     for i in range(self.layers):
         layer = UpSampling2D(2)(layer)
+        previous_step = layer
         
         layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
         layer = utils.PixelNorm()(layer)
         layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
         layer = utils.PixelNorm()(layer)
+   
+    next_step = Conv2D(3, (1,1), name = 'to_rgb')(layer) #to RGB
     
-    layer = Conv2D(3, (1,1), name = 'to_rgb')(layer) #to RGB
-    return Model(input_layer, layer)
+    if previous_step is not None: 
+        previous_step = Conv2D(3, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
+        
+        previous_step = Lambda(lambda x: x * (1 - a))(previous_step)
+        next_step = Lambda(lambda x: x * a)(next_step)
+        layer = add([previous_step, next_step])
+    else:
+        layer = next_step
+        
+    model = Model(input_layer, layer)
+    plot_model(model, 'genr.png')
+    return model
     
 def build_discriminator(self):
     input_layer = Input(shape=self.inp_shape)
@@ -51,20 +68,22 @@ def build_discriminator(self):
     
     layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
+    #layer = new_sheet(self, 64, (1,1), 'same', 'from_rgb')(layer)
     
     #Growing layers
     for i in range(self.layers, 0, -1):
         layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
-    
-    
+        
     layer = utils.MiniBatchStddev(group_size=4)(layer)
     layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
     layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
     layer = Dense(1, activation=self.disc_activation)(layer)
+    
+    #layer = utils.MiniBatchDiscrimination()(layer)
     return Model(input_layer, layer)
 
 
