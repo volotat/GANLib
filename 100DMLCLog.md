@@ -102,5 +102,5 @@
  
 **Today's progress** :  Switch MiniBatchStddev code to tensorflow version. Added MiniBatchDiscrimination layer to utils.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/50dadc9f5a851beaa13479fc84db4d518521faf9)
 
