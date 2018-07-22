@@ -104,3 +104,11 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/50dadc9f5a851beaa13479fc84db4d518521faf9)
 
+
+## Day 16 : July 22 , 2018
+ 
+**Today's progress** :  Made a draft version of smooth fading between layers in ProgGAN.
+
+**Link to work:**  [Commit]()
+
+

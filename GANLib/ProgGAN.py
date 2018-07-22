@@ -66,6 +66,7 @@ class ProgGAN():
         self.inp_shape = (sz,sz,3)
         
         self.weights = {}
+        self.transition_alpha = utils.tensor_value(0)
         '''
         self.genr_head_weights = None
         self.disc_head_weights = None
@@ -200,6 +201,7 @@ class ProgGAN():
             
             if epoch in grow_epochs:
                 if self.inp_shape != self.input_shape:
+                    self.transition_alpha.set(0)
                     
                     for l in self.generator.layers:
                         self.weights[l.name] = l.get_weights()
@@ -213,8 +215,11 @@ class ProgGAN():
                     self.build_models()
                     
                     train_set, valid_set, data_set_std, data_set_mean = setup()
+                    
+                    
                 
-                
+            a = self.transition_alpha.get()    
+            self.transition_alpha.set(min(a + 0.001, 1))    
             
             # ---------------------
             #  Train Discriminator

@@ -10,6 +10,17 @@ def Gravity(x, boundaries = [0,1], pressure = 0.5):
     res = min + (1. - np.abs(1. - (x - min) / dist) ** (1. - pressure)) * dist
     return res
 
+    
+#tensor values manipulation
+class tensor_value():
+    def __init__(self, x):
+        self.tensor = K.variable(value = x)
+        
+    def set(self, x):
+        K.set_value(self.tensor, x)
+        
+    def get(self):
+        return K.eval(self.tensor)
 
     
 # ---------------
@@ -89,24 +100,7 @@ class MiniBatchDiscrimination(Layer):
         
         
 
-
-#value storage
-class tf_value():
-    def __init__(self, ):
-        tensor = tf.Variable([0,0])
-        
-    def set(x):
-        zero_tsr 
-        tf.assign(zero_tsr,x)
-        
-    def get()
-        return x.eval()
-        
-    def get_tensor()
-        return x
-        
-        
-        
+   
 # -------------------
 #  Constructor
 # -------------------

@@ -24,7 +24,6 @@ def new_sheet(self, filters, kernel_size, padding, name):
     return func
 
 def build_generator(self):
-    a = 0.1
     previous_step = None
     next_step = None
 
@@ -49,26 +48,27 @@ def build_generator(self):
    
     next_step = Conv2D(3, (1,1), name = 'to_rgb')(layer) #to RGB
     
+    #smooth fading
     if previous_step is not None: 
         previous_step = Conv2D(3, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
         
-        previous_step = Lambda(lambda x: x * (1 - a))(previous_step)
-        next_step = Lambda(lambda x: x * a)(next_step)
+        previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
+        next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
         layer = add([previous_step, next_step])
     else:
         layer = next_step
         
-    model = Model(input_layer, layer)
-    plot_model(model, 'genr.png')
-    return model
+    return Model(input_layer, layer)
     
 def build_discriminator(self):
+    previous_step = None
+    next_step = None
+    
     input_layer = Input(shape=self.inp_shape)
     layer = input_layer
     
     layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
-    #layer = new_sheet(self, 64, (1,1), 'same', 'from_rgb')(layer)
     
     #Growing layers
     for i in range(self.layers, 0, -1):
@@ -76,6 +76,18 @@ def build_discriminator(self):
         layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
         
+        #smooth fading
+        if i == self.layers:
+            next_step = layer
+            
+            previous_step = AveragePooling2D(2)(input_layer)
+            previous_step = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None))(previous_step) #from RGB
+            previous_step = LeakyReLU(alpha=0.2)(previous_step) 
+        
+            previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
+            next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
+            layer = add([previous_step, next_step])  
+    
     layer = utils.MiniBatchStddev(group_size=4)(layer)
     layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
     layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
@@ -141,4 +153,4 @@ def callback():
     sample_images(gan.generator, path+'.png')
     plotter.save_hist_image(gan.history, path+'_hist.png')
     
-gan.train(X_train, epochs=20000, grow_epochs = [1000, 3000, 8000], batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs=20000, grow_epochs = [1000, 3000, 8000], batch_size=16, checkpoint_callback = callback, validation_split = 0.1)    
