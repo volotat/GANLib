@@ -112,3 +112,6 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/60782822e1fb326041acb9640f5ba7bcee86820f)
 
 
+## Day 17 : July 23 , 2018
+ 
+**Today's progress** :  Today I spent time testing ProgGAN on high resolution faces dataset.
