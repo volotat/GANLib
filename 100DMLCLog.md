@@ -115,3 +115,10 @@
 ## Day 17 : July 23 , 2018
  
 **Today's progress** :  Today I spent time testing ProgGAN on high resolution faces dataset.
+
+
+## Day 18 : July 24 , 2018
+ 
+**Today's progress** :  Code for MinibatchDiscrimination layer completely changed. Some improvements in ProgGAN. Still testing it on bigger dataset, but results not so good yet. 
+
+**Link to work:**  [Commit]()

@@ -27,9 +27,6 @@ from . import utils
 #   Make channels on layers became smaller while growing or make it optional
 #   Update train comment
 #   Need a way to save models and continue training after load
-#   Realize smooth transition after growing as it is in paper
-#   Need always conduct metric test on original dataset, but scale up model predictions if necessary
-
 #   Add He's initialization to trainable layers and improved Wasserstein loss to models
  
 class ProgGAN():
@@ -49,6 +46,7 @@ class ProgGAN():
 
     def __init__(self, input_shape, latent_dim = 100, mode = 'vanilla'):
         self.input_shape = input_shape
+        self.channels = input_shape[-1]
         self.latent_dim = latent_dim
         self.mode = mode
         
@@ -63,7 +61,7 @@ class ProgGAN():
         
         self.layers = 0
         sz = 2 ** (self.layers + 2)
-        self.inp_shape = (sz,sz,3)
+        self.inp_shape = (sz,sz,self.channels)
         
         self.weights = {}
         self.transition_alpha = utils.tensor_value(0)
@@ -77,7 +75,7 @@ class ProgGAN():
 
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
-            optimizer = Adam(0.0002, 0.5)
+            optimizer = Adam(0.0002, 0.5) #, beta_1=0.9, beta_2=0.99, epsilon=1e-8)
             
         if self.mode == 'stable':
             loss = 'logcosh'
@@ -125,7 +123,7 @@ class ProgGAN():
         self.generator.save(self.path+'/generator.h5')
         self.discriminator.save(self.path+'/discriminator.h5')
     
-    def train(self, data_set, batch_size=32, epochs=1, grow_epochs = [], verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size_list=[32], epochs_list=[1], verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -177,13 +175,11 @@ class ProgGAN():
     
         train_set, valid_set, data_set_std, data_set_mean = setup()
     
-        # Adversarial ground truths
-        out_shape = self.discriminator.output_shape
-        valid = np.ones((batch_size,) + out_shape[1:])
-        fake = np.zeros((batch_size,) + out_shape[1:])
+        
 
         #mean min max
-        max_hist_size = epochs//checkpoint_range + 1
+        tot_num_of_epochs = np.sum(np.array(epochs_list))
+        max_hist_size = tot_num_of_epochs//checkpoint_range + 1
         history = { 'gen_val'    :np.zeros((max_hist_size,3)), 
                     'train_val'  :np.zeros((max_hist_size,3)), 
                     'test_val'   :np.zeros((max_hist_size,3)), 
@@ -192,114 +188,138 @@ class ProgGAN():
                     'best_metric':0,
                     'hist_size'  :0}
         
-        for epoch in range(epochs):
-            self.epoch = epoch
+        for i in range(len(epochs_list)):
+            epochs = epochs_list[i]
+            batch_size = batch_size_list[i]
             
+            # Adversarial ground truths
+            out_shape = self.discriminator.output_shape
+            valid = np.ones((batch_size,) + out_shape[1:])
+            fake = np.zeros((batch_size,) + out_shape[1:])
+        
+            for epoch in range(epochs):
+                self.epoch = epoch
+                
+                a = self.transition_alpha.get()    
+                self.transition_alpha.set(min(epoch / float(epochs//2), 1))    
+                
+                # ---------------------
+                #  Train Discriminator
+                # ---------------------
+
+                # Select a random batch of images
+                idx = np.random.randint(0, train_set.shape[0], batch_size)
+                imgs = train_set[idx]
+
+                # Sample noise as generator input
+                noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+
+                # Generate new images
+                gen_imgs = self.generator.predict([noise])
+                
+                if self.mode == 'stable':
+                    trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.inp_shape)
+
+                    # Validate how good generated images looks like
+                    val = self.discriminator.predict([gen_imgs])
+                    crit = utils.Gravity(val, boundaries = [-1,1])
+                    
+                    # Train the discriminator
+                    d_loss_real = self.discriminator.train_on_batch([imgs], valid)
+                    d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
+                    d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
+                    d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
+                    
+                elif self.mode == 'vanilla':
+                    d_loss_real = self.discriminator.train_on_batch(imgs, valid) #valid
+                    d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake) #fake
+                    d_loss = (d_loss_real + d_loss_fake) / 2
+                    
+                else: raise Exception("Mode '" + self.mode+ "' is unknown")
+                '''
+                # Clip weights
+                clip_value = 1
+                for l in self.discriminator.layers:
+                    weights = l.get_weights()
+                    weights = [np.clip(w, -clip_value, clip_value) for w in weights]
+                    l.set_weights(weights)
+                '''   
+                
+                # ---------------------
+                #  Train Generator
+                # ---------------------
+                
+                # Train the generator
+                g_loss = self.combined.train_on_batch([noise], valid) #valid
+
+                '''
+                # Clip weights
+                clip_value = 1
+                for l in self.generator.layers:
+                    weights = l.get_weights()
+                    weights = [np.clip(w, -clip_value, clip_value) for w in weights]
+                    l.set_weights(weights)
+                '''
+                
+                # Plot the progress
+                if epoch % checkpoint_range == 0:
+                    gen_val = self.discriminator.predict([gen_imgs])
+                    
+                    #idx = np.random.randint(0, train_set.shape[0], batch_size)
+                    #train_val = self.discriminator.predict(train_set[idx])
+                    train_val = self.discriminator.predict([imgs])
+                    
+                    if valid_set is not None: 
+                        idx = np.random.randint(0, valid_set.shape[0], batch_size)
+                        test_val = self.discriminator.predict(valid_set[idx])
+                    else:
+                        test_val = np.zeros(batch_size)
+                    
+                    noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
+                    cont_val = self.discriminator.predict(noise)
+                    
+                    metric = self.metric_test(data_set, 1000)
+                    if verbose:
+                        print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                    
+                    hist_size = history['hist_size'] = history['hist_size']+1
+                    history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
+                    history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
+                    history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                    history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
+                    history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                    
+                    if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                        self.best_model = self.generator.get_weights()
+                        self.best_metric = np.mean(metric)
+                        history['best_metric'] = self.best_metric
+                        
+                    self.history = history
+                    
+                    if checkpoint_callback is not None:
+                        checkpoint_callback()
+        
+        
+        
             # ---------------------
             # Grow Network
             # ---------------------
             
-            if epoch in grow_epochs:
-                if self.inp_shape != self.input_shape:
-                    self.transition_alpha.set(0)
+            if self.inp_shape != self.input_shape:
+                self.transition_alpha.set(0)
+                
+                for l in self.generator.layers:
+                    self.weights[l.name] = l.get_weights()
                     
-                    for l in self.generator.layers:
-                        self.weights[l.name] = l.get_weights()
-                        
-                    for l in self.discriminator.layers:
-                        self.weights[l.name] = l.get_weights()   
-                    
-                    self.layers += 1
-                    sz = 2 ** (self.layers + 2)
-                    self.inp_shape = (sz,sz,3)
-                    self.build_models()
-                    
-                    train_set, valid_set, data_set_std, data_set_mean = setup()
-                    
-                    
+                for l in self.discriminator.layers:
+                    self.weights[l.name] = l.get_weights()   
                 
-            a = self.transition_alpha.get()    
-            self.transition_alpha.set(min(a + 0.001, 1))    
-            
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-
-            # Select a random batch of images
-            idx = np.random.randint(0, train_set.shape[0], batch_size)
-            imgs = train_set[idx]
-
-            # Sample noise as generator input
-            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-            # Generate new images
-            gen_imgs = self.generator.predict([noise])
-            
-            if self.mode == 'stable':
-                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.inp_shape)
-
-                # Validate how good generated images looks like
-                val = self.discriminator.predict([gen_imgs])
-                crit = utils.Gravity(val, boundaries = [-1,1])
+                self.layers += 1
+                sz = 2 ** (self.layers + 2)
+                self.inp_shape = (sz,sz,self.channels)
+                self.build_models()
                 
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([imgs], valid)
-                d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
-                d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
-                
-            elif self.mode == 'vanilla':
-                d_loss_real = self.discriminator.train_on_batch(imgs, valid) #valid
-                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake) #fake
-                d_loss = (d_loss_real + d_loss_fake) / 2
-                
-            else: raise Exception("Mode '" + self.mode+ "' is unknown")
-            
-            # ---------------------
-            #  Train Generator
-            # ---------------------
-            
-            # Train the generator
-            g_loss = self.combined.train_on_batch([noise], valid) #valid
-
-            # Plot the progress
-            if epoch % checkpoint_range == 0:
-                gen_val = self.discriminator.predict([gen_imgs])
-                
-                #idx = np.random.randint(0, train_set.shape[0], batch_size)
-                #train_val = self.discriminator.predict(train_set[idx])
-                train_val = self.discriminator.predict([imgs])
-                
-                if valid_set is not None: 
-                    idx = np.random.randint(0, valid_set.shape[0], batch_size)
-                    test_val = self.discriminator.predict(valid_set[idx])
-                else:
-                    test_val = np.zeros(batch_size)
-                
-                noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
-                cont_val = self.discriminator.predict(noise)
-                
-                metric = self.metric_test(data_set, 1000)
-                if verbose:
-                    print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                
-                hist_size = history['hist_size'] = history['hist_size']+1
-                history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
-                history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
-                
-                if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                    self.best_model = self.generator.get_weights()
-                    self.best_metric = np.mean(metric)
-                    history['best_metric'] = self.best_metric
-                    
-                self.history = history
-                
-                if checkpoint_callback is not None:
-                    checkpoint_callback()
-        
+                train_set, valid_set, data_set_std, data_set_mean = setup()
         
         
         if save_best_model:

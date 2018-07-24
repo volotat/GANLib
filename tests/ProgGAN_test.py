@@ -46,11 +46,12 @@ def build_generator(self):
         layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
         layer = utils.PixelNorm()(layer)
    
-    next_step = Conv2D(3, (1,1), name = 'to_rgb')(layer) #to RGB
+    next_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None), name = 'to_rgb')(layer) #to RGB
+    
     
     #smooth fading
     if previous_step is not None: 
-        previous_step = Conv2D(3, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
+        previous_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
         
         previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
         next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
@@ -67,7 +68,7 @@ def build_discriminator(self):
     input_layer = Input(shape=self.inp_shape)
     layer = input_layer
     
-    layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
+    layer = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     
     #Growing layers
@@ -86,27 +87,28 @@ def build_discriminator(self):
         
             previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
             next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
-            layer = add([previous_step, next_step])  
+            layer = add([previous_step, next_step]) 
+                
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
     layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
     layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
-    layer = Dense(1, activation=self.disc_activation)(layer)
+    #layer = Dense(256, weights = self.weights.get('disc_head_1',None), name = 'disc_head_1')(layer)
+    #layer = LeakyReLU(alpha=0.2)(layer) 
     
-    #layer = utils.MiniBatchDiscrimination()(layer)
+    layer = Dense(1, activation=self.disc_activation)(layer)
+
     return Model(input_layer, layer)
 
 
        
 noise_dim = 100    
+r, c = 3, 4
+noise = np.random.uniform(-1, 1, (r * c, noise_dim))
 
 def sample_images(gen, file):
-    r, c = 5, 5
-    
-    noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-
     gen_imgs = gen.predict([noise])
 
     # Rescale images 0 - 1
@@ -131,26 +133,31 @@ img_path = 'ProgGAN'
 mode = 'vanilla'
     
 # Load the dataset
-(X_train, labels), (_, _) = cifar10.load_data()
+#(X_train, labels), (_, _) = cifar10.load_data()
+#indx = np.where(labels == 1)[0]
+#X_train = X_train[indx]
 
-indx = np.where(labels == 1)[0]
-X_train = X_train[indx]
+X_train = np.load('../../Datasets/Faces/face_images_128x128.npy')
 
 # Configure input
 X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-
 if len(X_train.shape)<4:
     X_train = np.expand_dims(X_train, axis=3)
-
+    
+    
 #Run GAN for 20000 iterations
 gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
 gan.build_models()
 
+
+ind = 0
 def callback():
-    path = 'images/'+img_path+'/conv_'+mode
-    sample_images(gan.generator, path+'.png')
+    global ind 
+    ind+=1
+    path = 'images/'+img_path+'/'
+    sample_images(gan.generator, path+'imgs/'+str(ind)+'.png')
     plotter.save_hist_image(gan.history, path+'_hist.png')
     
-gan.train(X_train, epochs=20000, grow_epochs = [1000, 3000, 8000], batch_size=16, checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs_list = [1000, 2000, 3000, 5000, 8000, 13000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0.1)    
