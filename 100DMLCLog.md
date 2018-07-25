@@ -128,4 +128,4 @@
  
 **Today's progress** :  Added rough implementation of improved Wasserstein loss into ProgGAN.
 
-**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a1a7b1cb77616f1364d7ff9bf4051bbc0440cb47)
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5bd92f293c7379c1121908e6e1877f8f98f018c2)
