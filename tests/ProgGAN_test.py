@@ -16,9 +16,10 @@ import numpy as np
 from keras.utils import plot_model
 
 
-def new_sheet(self, filters, kernel_size, padding, name):
+def new_sheet(self, filters, kernel_size, padding, name, trainable = True):
     def func(layer):
-        layer = Conv2D(filters, kernel_size, padding=padding, weights = self.weights.get(name,None), name = name)(layer)
+        w = self.weights.get(name,None)
+        layer = Conv2D(filters, kernel_size, padding=padding, weights = w, name = name, trainable = trainable)(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         return layer
     return func
@@ -33,8 +34,8 @@ def build_generator(self):
     
     layer = new_sheet(self, 64, (4,4), 'same', 'genr_head_0')(layer)
     layer = utils.PixelNorm()(layer)
-    layer = new_sheet(self, 64, (3,3), 'same', 'genr_head_1')(layer)
-    layer = utils.PixelNorm()(layer)
+    #layer = new_sheet(self, 64, (3,3), 'same', 'genr_head_1')(layer)
+    #layer = utils.PixelNorm()(layer)
     
     #Growing layers
     for i in range(self.layers):
@@ -43,10 +44,10 @@ def build_generator(self):
         
         layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
         layer = utils.PixelNorm()(layer)
-        layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
-        layer = utils.PixelNorm()(layer)
+        #layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
+        #layer = utils.PixelNorm()(layer)
    
-    next_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None), name = 'to_rgb')(layer) #to RGB
+    next_step = Conv2D(self.channels, (1,1), name = 'to_rgb')(layer) #to RGB
     
     
     #smooth fading
@@ -68,13 +69,13 @@ def build_discriminator(self):
     input_layer = Input(shape=self.inp_shape)
     layer = input_layer
     
-    layer = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb')(layer) #from RGB
+    layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     
     #Growing layers
     for i in range(self.layers, 0, -1):
         layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
-        layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
+        #layer = new_sheet(self, 64, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
         
         #smooth fading
@@ -91,7 +92,7 @@ def build_discriminator(self):
                 
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
-    layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
+    #layer = new_sheet(self, 64, (3,3), 'same', 'disc_head_0')(layer)
     layer = new_sheet(self, 64, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
@@ -149,7 +150,9 @@ if len(X_train.shape)<4:
 gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
-gan.build_models()
+
+#optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8)
+gan.build_models(optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8))
 
 
 ind = 0
@@ -158,6 +161,7 @@ def callback():
     ind+=1
     path = 'images/'+img_path+'/'
     sample_images(gan.generator, path+'imgs/'+str(ind)+'.png')
-    plotter.save_hist_image(gan.history, path+'_hist.png')
+    #plotter.save_hist_image(gan.history, path+'_hist.png')
     
+    #[1000, 2000, 3000, 5000, 8000, 13000]
 gan.train(X_train, epochs_list = [1000, 2000, 3000, 5000, 8000, 13000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0.1)    

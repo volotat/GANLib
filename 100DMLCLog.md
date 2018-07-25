@@ -122,3 +122,10 @@
 **Today's progress** :  Code for MinibatchDiscrimination layer completely changed. Some improvements in ProgGAN. Still testing it on bigger dataset, but results not so good yet. 
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a1a7b1cb77616f1364d7ff9bf4051bbc0440cb47)
+
+
+## Day 19 : July 25 , 2018
+ 
+**Today's progress** :  Added rough implementation of improved Wasserstein loss into ProgGAN.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a1a7b1cb77616f1364d7ff9bf4051bbc0440cb47)
