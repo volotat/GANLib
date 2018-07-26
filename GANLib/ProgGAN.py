@@ -1,6 +1,6 @@
 from keras.layers import Input
 from keras.models import Model, load_model
-from keras.optimizers import Adam, RMSprop
+from keras.optimizers import Adam
 import os
 import numpy as np
 
@@ -38,8 +38,9 @@ from . import utils
  
 class RandomWeightedAverage(_Merge):
     def _merge_function(self, inputs):
-        alpha = K.random_uniform((16, 1, 1, 1))
-        return (alpha * inputs[0]) + ((1 - alpha) * inputs[1]) 
+        shape = K.shape(inputs[0])
+        weights = K.random_uniform((shape[0], 1, 1, 1))
+        return (weights * inputs[0]) + ((1 - weights) * inputs[1]) 
  
 class ProgGAN():
     def gradient_penalty_loss(self, y_true, y_pred, averaged_samples):
@@ -105,20 +106,19 @@ class ProgGAN():
         self.disc_weights = []
         '''
         
-        self.n_discr = 5
-        
 
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
             #optimizer = Adam(0.0002, 0.5) 
-            optimizer = RMSprop(lr=0.00005)
+            optimizer = Adam(0.0005, beta_1=0.5, beta_2=0.9) #, clipvalue=0.1
             
         if self.mode == 'stable':
             loss = 'logcosh'
             self.disc_activation = 'linear'
         elif self.mode == 'vanilla':
             loss = 'binary_crossentropy'
-            self.disc_activation = 'sigmoid'
+            #self.disc_activation = 'sigmoid'
+            self.disc_activation = 'linear'
         else: raise Exception("Mode '" + self.mode+ "' is unknown")
     
         self.path = path
@@ -185,13 +185,11 @@ class ProgGAN():
                           averaged_samples=interpolated_img)
         partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
 
-        self.critic_model = Model(inputs=[real_img, z_disc],
-                            outputs=[valid, fake, validity_interpolated])
-        self.critic_model.compile(loss=[self.wasserstein_loss,
-                                              self.wasserstein_loss,
+        self.discriminator_model = Model(inputs=[real_img, z_disc], outputs=[valid, fake, validity_interpolated])
+        self.discriminator_model.compile(loss=['mse',
+                                              'mse',
                                               partial_gp_loss],
-                                        optimizer=optimizer,
-                                        loss_weights=[1, 1, 10])
+                                        optimizer=optimizer)
         #-------------------------------
         # Graph for Generator
         #-------------------------------
@@ -208,7 +206,7 @@ class ProgGAN():
         valid = self.discriminator(img)
         # Defines generator model
         self.generator_model = Model(z_gen, valid)
-        self.generator_model.compile(loss=self.wasserstein_loss, optimizer=optimizer)
+        self.generator_model.compile(loss='mse', optimizer=optimizer)
 
 
         
@@ -283,6 +281,9 @@ class ProgGAN():
                     'best_metric':0,
                     'hist_size'  :0}
         
+        pr_w_gen = None
+        pr_w_disc = None
+                        
         for i in range(len(epochs_list)):
             epochs = epochs_list[i]
             batch_size = batch_size_list[i]
@@ -350,11 +351,11 @@ class ProgGAN():
                 #  Train Discriminator
                 # ---------------------
                 
-                for _ in range(self.n_discr):
-                    # Sample noise as generator input
-                    noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-                    # Train the critic
-                    d_loss = self.critic_model.train_on_batch([imgs, noise], [valid, fake, dummy])
+                #for _ in range(5):
+                # Sample noise as generator input
+                noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+                # Train the critic
+                d_loss = self.discriminator_model.train_on_batch([imgs, noise], [valid, fake, dummy])
 
                 # ---------------------
                 #  Train Generator
@@ -362,10 +363,9 @@ class ProgGAN():
 
                 g_loss = self.generator_model.train_on_batch(noise, valid)
                     
-                
                 # Plot the progress
                 if epoch % checkpoint_range == 0:
-                    print(epoch)
+                    print('Epoch: %d, losses: %s:%s' % (epoch, d_loss, g_loss))
                     '''
                     gen_val = self.discriminator.predict([gen_imgs])
                     

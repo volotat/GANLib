@@ -129,3 +129,10 @@
 **Today's progress** :  Added rough implementation of improved Wasserstein loss into ProgGAN.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5bd92f293c7379c1121908e6e1877f8f98f018c2)
+
+
+## Day 20 : July 26 , 2018
+ 
+**Today's progress** :  Some improvements in ProgGAN. Now it produce more consistent results, but still breaks if model become too big.
+
+**Link to work:**  [Commit]()

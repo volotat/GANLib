@@ -13,13 +13,16 @@ from keras.optimizers import Adam, RMSprop, Nadam
 import matplotlib.pyplot as plt
 import numpy as np
 
+import keras.backend as K
+import tensorflow as tf
+
 from keras.utils import plot_model
 
 
 def new_sheet(self, filters, kernel_size, padding, name, trainable = True):
     def func(layer):
         w = self.weights.get(name,None)
-        layer = Conv2D(filters, kernel_size, padding=padding, weights = w, name = name, trainable = trainable)(layer)
+        layer = Conv2D(filters, kernel_size, padding=padding, weights = w, name = name, trainable = trainable, kernel_initializer = 'he_normal')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         return layer
     return func
@@ -47,19 +50,20 @@ def build_generator(self):
         #layer = new_sheet(self, 64, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
         #layer = utils.PixelNorm()(layer)
    
-    next_step = Conv2D(self.channels, (1,1), name = 'to_rgb')(layer) #to RGB
+    next_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = 'he_normal')(layer) #to RGB
     
     
     #smooth fading
     if previous_step is not None: 
-        previous_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
+        previous_step = Conv2D(self.channels, (1,1), weights = self.weights.get('to_rgb',None), trainable = False)(previous_step) 
         
         previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
         next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
         layer = add([previous_step, next_step])
+        #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
     else:
         layer = next_step
-        
+      
     return Model(input_layer, layer)
     
 def build_discriminator(self):
@@ -69,7 +73,7 @@ def build_discriminator(self):
     input_layer = Input(shape=self.inp_shape)
     layer = input_layer
     
-    layer = Conv2D(64, (1,1), name = 'from_rgb')(layer) #from RGB
+    layer = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = 'he_normal')(layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     
     #Growing layers
@@ -83,12 +87,13 @@ def build_discriminator(self):
             next_step = layer
             
             previous_step = AveragePooling2D(2)(input_layer)
-            previous_step = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None))(previous_step) #from RGB
+            previous_step = Conv2D(64, (1,1), weights = self.weights.get('from_rgb',None), trainable = False)(previous_step) #from RGB
             previous_step = LeakyReLU(alpha=0.2)(previous_step) 
         
             previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
             next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
-            layer = add([previous_step, next_step]) 
+            layer = add([previous_step, next_step])
+            #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
                 
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
@@ -99,7 +104,7 @@ def build_discriminator(self):
     #layer = Dense(256, weights = self.weights.get('disc_head_1',None), name = 'disc_head_1')(layer)
     #layer = LeakyReLU(alpha=0.2)(layer) 
     
-    layer = Dense(1, activation=self.disc_activation)(layer)
+    layer = Dense(1, activation=self.disc_activation, kernel_initializer = 'he_normal')(layer)
 
     return Model(input_layer, layer)
 
@@ -140,7 +145,7 @@ mode = 'vanilla'
 
 X_train = np.load('../../Datasets/Faces/face_images_128x128.npy')
 
-# Configure input
+#Configure input
 X_train = (X_train.astype(np.float32) - 127.5) / 127.5
 if len(X_train.shape)<4:
     X_train = np.expand_dims(X_train, axis=3)
@@ -151,8 +156,7 @@ gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
 
-#optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8)
-gan.build_models(optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8))
+gan.build_models(optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8, clipvalue=0.01))
 
 
 ind = 0
@@ -162,6 +166,5 @@ def callback():
     path = 'images/'+img_path+'/'
     sample_images(gan.generator, path+'imgs/'+str(ind)+'.png')
     #plotter.save_hist_image(gan.history, path+'_hist.png')
-    
     #[1000, 2000, 3000, 5000, 8000, 13000]
-gan.train(X_train, epochs_list = [1000, 2000, 3000, 5000, 8000, 13000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs_list = [4000, 8000, 8000, 16000, 16000, 32000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0.1)    
