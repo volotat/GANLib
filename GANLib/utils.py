@@ -1,3 +1,4 @@
+import keras
 from keras import backend as K
 from keras.engine.topology import Layer
 import numpy as np
@@ -5,6 +6,9 @@ import tensorflow as tf
 
 from keras.engine import InputSpec, Layer
 from keras import initializers, regularizers, constraints
+
+from keras.layers.convolutional import Conv2D
+from keras.legacy import interfaces
 
 def Gravity(x, boundaries = [0,1], pressure = 0.5):
     min = boundaries[0]
@@ -29,7 +33,6 @@ class tensor_value():
 # ---------------
 #  Layers
 # ---------------
-    
 #Pixelwise feature vector normalization layer from "Progressive Growing of GANs" paper
 class PixelNorm(Layer): #It will work only if channels are last in order! I have to do something with it.
     def __init__(self, epsilon = 1e-8, **kwargs):

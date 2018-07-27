@@ -136,3 +136,10 @@
 **Today's progress** :  Some improvements in ProgGAN. Now it produce more consistent results, but still breaks if model become too big.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/6de25995c0b36f7d65bde13a7dd7a2c8d3e2991f)
+
+
+## Day 21 : July 27 , 2018
+ 
+**Today's progress** :  Still working on improvements for ProgGAN. For now there are realized most of significant features from the paper.
+
+**Link to work:**  [Commit]()

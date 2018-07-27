@@ -109,8 +109,7 @@ class ProgGAN():
 
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
-            #optimizer = Adam(0.0002, 0.5) 
-            optimizer = Adam(0.0005, beta_1=0.5, beta_2=0.9) #, clipvalue=0.1
+            optimizer = Adam(0.0002, beta_1=0.5, beta_2=0.9)
             
         if self.mode == 'stable':
             loss = 'logcosh'
@@ -131,7 +130,7 @@ class ProgGAN():
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=loss, optimizer=optimizer)
+                #self.discriminator.compile(loss=loss, optimizer=optimizer)
 
                 # Build the generator
                 self.generator = self.build_generator()
@@ -187,8 +186,8 @@ class ProgGAN():
 
         self.discriminator_model = Model(inputs=[real_img, z_disc], outputs=[valid, fake, validity_interpolated])
         self.discriminator_model.compile(loss=['mse',
-                                              'mse',
-                                              partial_gp_loss],
+                                               'mse',
+                                               partial_gp_loss],
                                         optimizer=optimizer)
         #-------------------------------
         # Graph for Generator
