@@ -19,8 +19,8 @@ import keras
 
 from keras.utils import plot_model
 
-init =  'he_normal' #keras.initializers.RandomNormal(0.0, 0.02) #
-filt = 64
+init = 'he_normal' 
+filters = 64
 
 
 def l2_norm(v, eps=1e-12):
@@ -34,11 +34,7 @@ def spectral_norm(w, iteration=1):
     
     u_hat = u
     v_hat = None
-    for i in range(iteration):
-        """
-        power iteration
-        Usually iteration = 1 will be enough
-        """
+    for i in range(iteration): #power iteration, usually iteration = 1 will be enough
         v_ = K.dot(u_hat, tf.transpose(w))
         v_hat = l2_norm(v_)
 
@@ -52,14 +48,17 @@ def spectral_norm(w, iteration=1):
 
     return w_norm
 
-def scale_weights(shapes, gain = np.sqrt(2)):
-    #He's normal dynamic weight scaler
-    fan_in = np.prod(shapes)
-    std = gain / np.sqrt(fan_in)
-    return K.constant(std)
+def dynamic_he_scale(x, gain = np.sqrt(2)): 
+    #He's normal dynamic weight scaler. Used in paper. Completely not working for me. Probably I'm doing something horribly wrong.
+    shape = x.shape.as_list()
+    fan_in, _ = keras.initializers._compute_fans(shape)
+    std = np.sqrt(gain / max(1., fan_in)) 
+    x_scale = x * K.constant(std)
+    
+    return x_scale
     
     
-weights_scale_func = lambda x: x
+weights_scale_func = spectral_norm #dynamic_he_scale, lambda x: x
 
 class Conv2D_sw(Conv2D): #Conv2D layer with dynamically scaled weights
     def __init__(self, filters, kernel_size, **kwargs):
@@ -99,13 +98,19 @@ class Dense_sw(Dense): #Dense layer with dynamically scaled weights
         if self.activation is not None:
             output = self.activation(output)
         return output
+        
+        
+def gradient_control(x, a):
+    #a = a ** 2
+    return K.stop_gradient(x)* (1 - a * 0.99) +  x * (0.01 + a * 0.99)        
 
 
-def new_sheet(self, filters, kernel_size, padding, name, trainable = True):
+def new_sheet(self, filters, kernel_size, padding, name):
     def func(layer):
         w = self.weights.get(name,None)
-        layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, trainable = trainable, kernel_initializer = init)(layer)
+        layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, kernel_initializer = init)(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
+        layer = utils.PixelNorm()(layer)
         return layer
     return func
    
@@ -120,35 +125,26 @@ def build_generator(self):
     layer = RepeatVector(16)(input_layer)
     layer = Reshape((4, 4, self.latent_dim))(layer)
     
-    #layer = Dense_sw(filt * 4 * 4, kernel_initializer = init)(input_layer)
-    #layer = LeakyReLU(alpha=0.2)(layer) 
-    #layer = Reshape((4, 4, filt))(layer)
-    
-    layer = new_sheet(self, filt, (4,4), 'same', 'genr_head_0')(layer)
-    layer = utils.PixelNorm()(layer)
-    layer = new_sheet(self, filt, (3,3), 'same', 'genr_head_1')(layer)
-    layer = utils.PixelNorm()(layer)
+    layer = new_sheet(self, filters, (4,4), 'same', 'genr_head_0')(layer)
+    layer = new_sheet(self, filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
     for i in range(self.layers):
         layer = UpSampling2D(2)(layer)
-        previous_step = layer
         
-        layer = new_sheet(self, filt, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
-        layer = utils.PixelNorm()(layer)
-        #layer = new_sheet(self, filt, (3,3), 'same', 'genr_layer_1'+str(i))(layer)
-        #layer = utils.PixelNorm()(layer)
+        if i == self.layers-1:
+            previous_step = layer
+            #previous_step = Lambda(lambda x: gradient_control(x, 1 - self.transition_alpha.tensor))(previous_step)
+            #layer = Lambda(lambda x: gradient_control(x, self.transition_alpha.tensor))(layer)
+            
+        layer = new_sheet(self, filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
     next_step = Conv2D_sw(self.channels, (1,1), weights = self.weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = init)(layer) #to RGB
     
     #smooth fading
     if previous_step is not None: 
         previous_step = Conv2D_sw(self.channels, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
-        
-        previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
-        next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
-        layer = add([previous_step, next_step])
-        #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
+        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
     else:
         layer = next_step
       
@@ -159,39 +155,33 @@ def build_discriminator(self):
     next_step = None
     
     input_layer = Input(shape=self.inp_shape)
-    layer = input_layer
     
-    layer = Conv2D_sw(filt, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = init)(layer) #from RGB
+    #layer = Lambda(lambda x: gradient_control(x, self.transition_alpha.tensor))(input_layer)
+    layer = Conv2D_sw(filters, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = init)(input_layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     layer = utils.PixelNorm()(layer)
     
     #Growing layers
     for i in range(self.layers, 0, -1):
-        layer = new_sheet(self, filt, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
-        layer = utils.PixelNorm()(layer)
-        #layer = new_sheet(self, filt, (3,3), 'same', 'disc_layer_1'+str(i))(layer)
+        layer = new_sheet(self, filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
 
         #smooth fading
         if i == self.layers:
             next_step = layer
             
+            #previous_step = Lambda(lambda x: gradient_control(x, 1 - self.transition_alpha.tensor))(input_layer)
             previous_step = AveragePooling2D(2)(input_layer)
-            previous_step = Conv2D_sw(filt, (1,1), weights = self.weights.get('from_rgb',None))(previous_step) #from RGB
+            previous_step = Conv2D_sw(filters, (1,1), weights = self.weights.get('from_rgb',None))(previous_step) #from RGB
             previous_step = LeakyReLU(alpha=0.2)(previous_step) 
             previous_step = utils.PixelNorm()(previous_step)
         
-            previous_step = Lambda(lambda x: x * (1 - self.transition_alpha.tensor))(previous_step)
-            next_step = Lambda(lambda x: x * self.transition_alpha.tensor)(next_step)
-            layer = add([previous_step, next_step])
-            #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
+            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
                 
     
-    #layer = utils.MiniBatchStddev(group_size=4)(layer)
-    layer = new_sheet(self, filt, (3,3), 'same', 'disc_head_0')(layer)
-    layer = utils.PixelNorm()(layer)
-    layer = new_sheet(self, filt, (4,4), 'valid', 'disc_head_1')(layer)
-    layer = utils.PixelNorm()(layer)
+    layer = utils.MiniBatchStddev(group_size=4)(layer)
+    layer = new_sheet(self, filters, (3,3), 'same', 'disc_head_0')(layer)
+    layer = new_sheet(self, filters, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
     layer = Dense_sw(1, activation=self.disc_activation, kernel_initializer = init)(layer)
@@ -229,11 +219,11 @@ img_path = 'ProgGAN'
 mode = 'vanilla'
     
 # Load the dataset
-(X_train, labels), (_, _) = cifar10.load_data()
-indx = np.where(labels == 1)[0]
-X_train = X_train[indx]
+#(X_train, labels), (_, _) = cifar10.load_data()
+#indx = np.where(labels == 1)[0]
+#X_train = X_train[indx]
 
-#X_train = np.load('../../Datasets/Faces/face_images_128x128.npy')
+X_train = np.load('../../Datasets/Faces/face_images_128x128.npy')
 
 #Configure input
 X_train = (X_train.astype(np.float32) - 127.5) / 127.5
@@ -246,7 +236,7 @@ gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
 
-#optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8, clipvalue=0.1)
+#optimizer = Adam(0.001, beta_1=0., beta_2=0.99, epsilon=1e-8)
 gan.build_models() 
 
 
@@ -258,4 +248,4 @@ def callback():
     sample_images(gan.generator, path+'imgs/'+str(ind)+'.png')
     #plotter.save_hist_image(gan.history, path+'_hist.png')
     #[1000, 2000, 3000, 5000, 8000, 13000]
-gan.train(X_train, epochs_list = [4000, 8000, 16000, 32000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0)    
+gan.train(X_train, epochs_list = [2000, 4000, 4000, 4000, 4000, 4000], batch_size_list=[16, 16, 16, 16, 8, 4], checkpoint_callback = callback, validation_split = 0)    

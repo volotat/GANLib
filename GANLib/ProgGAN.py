@@ -33,7 +33,6 @@ from . import utils
 #   Make channels on layers became smaller while growing or make it optional
 #   Update train comment
 #   Need a way to save models and continue training after load
-#   Add He's initialization to trainable layers and improved Wasserstein loss to models
  
  
 class RandomWeightedAverage(_Merge):
@@ -59,9 +58,6 @@ class ProgGAN():
         gradient_penalty = K.square(1 - gradient_l2_norm)
         # return the mean as loss over all the batch samples
         return K.mean(gradient_penalty)
-
-    def wasserstein_loss(self, y_true, y_pred):
-        return K.mean(y_true * y_pred)
         
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -98,18 +94,11 @@ class ProgGAN():
         
         self.weights = {}
         self.transition_alpha = utils.tensor_value(0)
-        '''
-        self.genr_head_weights = None
-        self.disc_head_weights = None
-        
-        self.genr_weights = []
-        self.disc_weights = []
-        '''
         
 
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
-            optimizer = Adam(0.0002, beta_1=0.5, beta_2=0.9)
+            optimizer = Adam(0.0002, beta_1=0.5, beta_2=0.9, clipvalue=1)
             
         if self.mode == 'stable':
             loss = 'logcosh'
@@ -411,8 +400,13 @@ class ProgGAN():
             if self.inp_shape != self.input_shape:
                 self.transition_alpha.set(0)
                 
-                for l in self.generator.layers:
-                    self.weights[l.name] = l.get_weights()
+                for i in range(len(self.generator.layers)):
+                    l = self.generator.layers[i]
+                    weights = l.get_weights()
+                    if len(weights)>0:
+                        for j in range(len(weights)):
+                            weights[j] = weights[j] * 2
+                        self.weights[l.name] = weights
                     
                 for l in self.discriminator.layers:
                     self.weights[l.name] = l.get_weights()   

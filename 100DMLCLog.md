@@ -143,3 +143,10 @@
 **Today's progress** :  Still working on improvements for ProgGAN. For now there are realized most of significant features from the paper.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/f114b3adb330787c19e8431d6a957ce2339d99a9)
+
+
+## Day 22 : July 28 , 2018
+ 
+**Today's progress** :  After a number of experiments ProgGAN seems to work a bit better, although far from perfect. I guess it is best result that I can get by now.
+
+**Link to work:**  [Commit]()
