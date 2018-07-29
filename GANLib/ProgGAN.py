@@ -28,11 +28,7 @@ from . import utils
 #   model structure than overall algorithm and GANLib allows specified whatever model you want.
 
 #       To do:
-#   In original paper all weights remains trainable, but I need to make this optional
-#   Need to restrict data shape to power of 2
-#   Make channels on layers became smaller while growing or make it optional
 #   Update train comment
-#   Need a way to save models and continue training after load
  
  
 class RandomWeightedAverage(_Merge):
@@ -100,12 +96,11 @@ class ProgGAN():
         if optimizer is None:
             optimizer = Adam(0.0002, beta_1=0.5, beta_2=0.9, clipvalue=1)
             
-        if self.mode == 'stable':
-            loss = 'logcosh'
+        if self.mode == 'mse':
+            loss = 'mse'
             self.disc_activation = 'linear'
         elif self.mode == 'vanilla':
-            loss = 'binary_crossentropy'
-            #self.disc_activation = 'sigmoid'
+            loss = utils.wasserstein_loss
             self.disc_activation = 'linear'
         else: raise Exception("Mode '" + self.mode+ "' is unknown")
     
@@ -117,12 +112,9 @@ class ProgGAN():
             if self.build_discriminator is None or self.build_generator is None:
                 raise Exception("Model building functions are not defined")
             else:
-                # Build and compile the discriminator
-                self.discriminator = self.build_discriminator()
-                #self.discriminator.compile(loss=loss, optimizer=optimizer)
-
-                # Build the generator
+                # Build the generator and discriminator
                 self.generator = self.build_generator()
+                self.discriminator = self.build_discriminator()
 
         '''
         # The generator takes noise and the target label as input
@@ -154,7 +146,7 @@ class ProgGAN():
         real_img = Input(shape=self.inp_shape)
 
         # Noise input
-        z_disc = Input(shape=(100,))
+        z_disc = Input(shape=(self.latent_dim,))
         # Generate image based of noise (fake sample)
         fake_img = self.generator(z_disc)
 
@@ -174,8 +166,8 @@ class ProgGAN():
         partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
 
         self.discriminator_model = Model(inputs=[real_img, z_disc], outputs=[valid, fake, validity_interpolated])
-        self.discriminator_model.compile(loss=['mse',
-                                               'mse',
+        self.discriminator_model.compile(loss=[loss,
+                                               loss,
                                                partial_gp_loss],
                                         optimizer=optimizer)
         #-------------------------------
@@ -187,14 +179,14 @@ class ProgGAN():
         self.generator.trainable = True
 
         # Sampled noise for input to generator
-        z_gen = Input(shape=(100,))
+        z_gen = Input(shape=(self.latent_dim,))
         # Generate images based of noise
         img = self.generator(z_gen)
         # Discriminator determines validity
         valid = self.discriminator(img)
         # Defines generator model
         self.generator_model = Model(z_gen, valid)
-        self.generator_model.compile(loss='mse', optimizer=optimizer)
+        self.generator_model.compile(loss=loss, optimizer=optimizer)
 
 
         
@@ -285,7 +277,7 @@ class ProgGAN():
             
             valid = -np.ones((batch_size, 1))
             fake =  np.ones((batch_size, 1))
-            dummy = np.zeros((batch_size, 1))
+            average = np.zeros((batch_size, 1))
         
             for epoch in range(epochs):
                 self.epoch = epoch
@@ -339,11 +331,8 @@ class ProgGAN():
                 #  Train Discriminator
                 # ---------------------
                 
-                #for _ in range(5):
-                # Sample noise as generator input
                 noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-                # Train the critic
-                d_loss = self.discriminator_model.train_on_batch([imgs, noise], [valid, fake, dummy])
+                d_loss = self.discriminator_model.train_on_batch([imgs, noise], [valid, fake, average])[0]
 
                 # ---------------------
                 #  Train Generator
@@ -353,8 +342,9 @@ class ProgGAN():
                     
                 # Plot the progress
                 if epoch % checkpoint_range == 0:
-                    print('Epoch: %d, losses: %s:%s' % (epoch, d_loss, g_loss))
-                    '''
+                    #print('Epoch: %d, losses: %s:%s' % (epoch, d_loss, g_loss))
+                    
+                    gen_imgs = self.generator.predict([noise])
                     gen_val = self.discriminator.predict([gen_imgs])
                     
                     #idx = np.random.randint(0, train_set.shape[0], batch_size)
@@ -387,7 +377,7 @@ class ProgGAN():
                         history['best_metric'] = self.best_metric
                         
                     self.history = history
-                    '''
+                    
                     if checkpoint_callback is not None:
                         checkpoint_callback()
         
@@ -400,16 +390,12 @@ class ProgGAN():
             if self.inp_shape != self.input_shape:
                 self.transition_alpha.set(0)
                 
-                for i in range(len(self.generator.layers)):
-                    l = self.generator.layers[i]
-                    weights = l.get_weights()
-                    if len(weights)>0:
-                        for j in range(len(weights)):
-                            weights[j] = weights[j] * 2
-                        self.weights[l.name] = weights
+                #copy old weights to new expanded network
+                for l in self.generator.layers:
+                    self.weights[l.name] = l.get_weights() 
                     
                 for l in self.discriminator.layers:
-                    self.weights[l.name] = l.get_weights()   
+                    self.weights[l.name] = l.get_weights() 
                 
                 self.layers += 1
                 sz = 2 ** (self.layers + 2)
