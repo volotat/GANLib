@@ -104,9 +104,7 @@ class ProgGAN():
                 self.discriminator = self.build_discriminator()
 
         
-        # Use Python partial to provide loss function with additional 'averaged_samples' argument
-        partial_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=interpolated_img)
-        partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
+        
 
         
         #-------------------------------
@@ -130,6 +128,10 @@ class ProgGAN():
         # Construct weighted average between real and fake images
         interpolated_img = RandomWeightedAverage()([real_img, fake_img])
         validity_interpolated = self.discriminator(interpolated_img)
+        
+        # Use Python partial to provide loss function with additional 'averaged_samples' argument
+        partial_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=interpolated_img)
+        partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
 
         self.discriminator_model = Model(inputs=[real_img, latent], outputs=[valid, fake, validity_interpolated])
         self.discriminator_model.compile(loss=[loss, loss, partial_gp_loss],
