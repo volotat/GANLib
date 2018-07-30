@@ -49,8 +49,7 @@ class PixelNorm(Layer): #It will work only if channels are last in order! I have
         super(PixelNorm, self).build(input_shape)
 
     def call(self, x, *args, **kwargs):
-        #return x / K.sqrt(K.mean(K.square(x), axis=-1, keepdims=True) + self.epsilon)
-        return x * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=-1, keepdims=True) + self.epsilon)
+        return x / K.sqrt(K.mean(K.square(x), axis=-1, keepdims=True) + self.epsilon)
 
     def compute_output_shape(self, input_shape):
         return input_shape

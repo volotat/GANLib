@@ -10,12 +10,10 @@ from functools import partial
 import keras.backend as K
 from keras.layers.merge import _Merge
 
-
-
 from . import metrics
 from . import utils
 
-#                   Progressively growing GAN
+#                   Progressively growing of GANs
 #   Paper: https://arxiv.org/pdf/1710.10196.pdf
 
 #       Description:
@@ -26,9 +24,6 @@ from . import utils
 #   Pixelwise normalization, minibatch stddev and other "tricks" from paper realized 
 #   outside of the class in utils module. The reason is they are more related to internal 
 #   model structure than overall algorithm and GANLib allows specified whatever model you want.
-
-#       To do:
-#   Update train comment
  
  
 class RandomWeightedAverage(_Merge):
@@ -38,21 +33,12 @@ class RandomWeightedAverage(_Merge):
         return (weights * inputs[0]) + ((1 - weights) * inputs[1]) 
  
 class ProgGAN():
-    def gradient_penalty_loss(self, y_true, y_pred, averaged_samples):
-        """
-        Computes gradient penalty based on prediction and weighted real / fake samples
-        """
+    def gradient_penalty_loss(self, y_true, y_pred, averaged_samples): #Computes gradient penalty based on prediction and weighted real / fake samples
         gradients = K.gradients(y_pred, averaged_samples)[0]
-        # compute the euclidean norm by squaring ...
         gradients_sqr = K.square(gradients)
-        #   ... summing over the rows ...
-        gradients_sqr_sum = K.sum(gradients_sqr,
-                                  axis=np.arange(1, len(gradients_sqr.shape)))
-        #   ... and sqrt
+        gradients_sqr_sum = K.sum(gradients_sqr, axis=np.arange(1, len(gradients_sqr.shape)))
         gradient_l2_norm = K.sqrt(gradients_sqr_sum)
-        # compute lambda * (1 - ||grad||)^2 still for each single sample
         gradient_penalty = K.square(1 - gradient_l2_norm)
-        # return the mean as loss over all the batch samples
         return K.mean(gradient_penalty)
         
     def metric_test(self, set, pred_num = 32):    
@@ -70,6 +56,7 @@ class ProgGAN():
         return met_arr   
 
     def __init__(self, input_shape, latent_dim = 100, mode = 'vanilla'):
+        #for now it only works for square images with power of 2 resolution  
         self.input_shape = input_shape
         self.channels = input_shape[-1]
         self.latent_dim = latent_dim
@@ -116,39 +103,25 @@ class ProgGAN():
                 self.generator = self.build_generator()
                 self.discriminator = self.build_discriminator()
 
-        '''
-        # The generator takes noise and the target label as input
-        # and generates the corresponding digit of that label
-        noise = Input(shape=(self.latent_dim,))
-        img = self.generator([noise])
+        
+        # Use Python partial to provide loss function with additional 'averaged_samples' argument
+        partial_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=interpolated_img)
+        partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
 
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
-
-        # The discriminator takes generated image as input and determines validity
-        # and the label of that image
-        valid = self.discriminator([img])
-
-        # The combined model  (stacked generator and discriminator)
-        # Trains generator to fool discriminator
-        self.combined = Model([noise], valid)
-        self.combined.compile(loss=loss, optimizer=optimizer)
-        '''
-
+        
         #-------------------------------
         # Graph for the Discriminator
         #-------------------------------
-
-        # Freeze generator's layers while training discriminator
+        
+        self.discriminator.trainable = True
         self.generator.trainable = False
-
-        # Image input (real sample)
+        
+        # Inputs
         real_img = Input(shape=self.inp_shape)
-
-        # Noise input
-        z_disc = Input(shape=(self.latent_dim,))
+        latent = Input(shape=(self.latent_dim,))
+        
         # Generate image based of noise (fake sample)
-        fake_img = self.generator(z_disc)
+        fake_img = self.generator(latent)
 
         # Discriminator determines validity of the real and fake images
         fake = self.discriminator(fake_img)
@@ -156,39 +129,28 @@ class ProgGAN():
 
         # Construct weighted average between real and fake images
         interpolated_img = RandomWeightedAverage()([real_img, fake_img])
-        # Determine validity of weighted sample
         validity_interpolated = self.discriminator(interpolated_img)
 
-        # Use Python partial to provide loss function with additional
-        # 'averaged_samples' argument
-        partial_gp_loss = partial(self.gradient_penalty_loss,
-                          averaged_samples=interpolated_img)
-        partial_gp_loss.__name__ = 'gradient_penalty' # Keras requires function names
-
-        self.discriminator_model = Model(inputs=[real_img, z_disc], outputs=[valid, fake, validity_interpolated])
-        self.discriminator_model.compile(loss=[loss,
-                                               loss,
-                                               partial_gp_loss],
+        self.discriminator_model = Model(inputs=[real_img, latent], outputs=[valid, fake, validity_interpolated])
+        self.discriminator_model.compile(loss=[loss, loss, partial_gp_loss],
                                         optimizer=optimizer)
+        
+        
         #-------------------------------
         # Graph for Generator
         #-------------------------------
 
-        # For the generator we freeze the discriminator's layers
         self.discriminator.trainable = False
         self.generator.trainable = True
-
-        # Sampled noise for input to generator
-        z_gen = Input(shape=(self.latent_dim,))
-        # Generate images based of noise
-        img = self.generator(z_gen)
-        # Discriminator determines validity
-        valid = self.discriminator(img)
+        
+        # Inputs
+        latent = Input(shape=(self.latent_dim,))
+        
         # Defines generator model
-        self.generator_model = Model(z_gen, valid)
+        valid = self.discriminator(self.generator(latent))
+        
+        self.generator_model = Model(latent, valid)
         self.generator_model.compile(loss=loss, optimizer=optimizer)
-
-
         
         print('models builded')        
     
@@ -196,15 +158,15 @@ class ProgGAN():
         self.generator.save(self.path+'/generator.h5')
         self.discriminator.save(self.path+'/discriminator.h5')
     
-    def train(self, data_set, batch_size_list=[32], epochs_list=[1], verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size_list=[32], epochs_list=[1], verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, store_history = True):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
                 Numpy array of training data.
-            batch_size:
-                Number of samples per gradient update.
-            epochs: Number of epochs to train the model.
-                An epoch is an iteration over batch sized samples of dataset.
+            batch_size_list:
+                List of Numbers of samples per gradient update for each growing step.
+            epochs_list: Number of epochs to train the model.
+                An epoch is an iteration over batch sized samples of dataset for each growing step.
             grow_epochs: List of epochs indexes in witch networks will grow 
                 new layers if it's possible
             checkpoint_range:
@@ -222,6 +184,8 @@ class ProgGAN():
                 The validation data is selected from the last samples.
             save_best_model:
                 Boolean. If True, generator weights will be resigned to best model according to chosen metric.
+            store_history:
+                Boolean. If True, all training history will store into 'history' object. Might be somewhat computationally expensive.
         # Returns
             A history object. 
         """ 
@@ -289,94 +253,52 @@ class ProgGAN():
                 idx = np.random.randint(0, train_set.shape[0], batch_size)
                 imgs = train_set[idx]
                 
-                '''
                 # ---------------------
-                #  Train Discriminator
-                # ---------------------
-                # Sample noise as generator input
-                noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-                # Generate new images
-                gen_imgs = self.generator.predict([noise])
-                
-                if self.mode == 'stable':
-                    trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.inp_shape)
-
-                    # Validate how good generated images looks like
-                    val = self.discriminator.predict([gen_imgs])
-                    crit = utils.Gravity(val, boundaries = [-1,1])
-                    
-                    # Train the discriminator
-                    d_loss_real = self.discriminator.train_on_batch([imgs], valid)
-                    d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                    d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
-                    d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
-                    
-                elif self.mode == 'vanilla':
-                    d_loss_real = self.discriminator.train_on_batch(imgs, valid) #valid
-                    d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake) #fake
-                    d_loss = (d_loss_real + d_loss_fake) / 2
-                    
-                else: raise Exception("Mode '" + self.mode+ "' is unknown") 
-                
-                # ---------------------
-                #  Train Generator
-                # ---------------------
-                
-                # Train the generator
-                g_loss = self.combined.train_on_batch([noise], valid) #valid
-                '''
-                
-                # ---------------------
-                #  Train Discriminator
+                #  Train Discriminator and Generator
                 # ---------------------
                 
                 noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-                d_loss = self.discriminator_model.train_on_batch([imgs, noise], [valid, fake, average])[0]
-
-                # ---------------------
-                #  Train Generator
-                # ---------------------
+                d_loss = self.discriminator_model.train_on_batch([imgs, noise], [valid, fake, average])[0] / 3.
 
                 g_loss = self.generator_model.train_on_batch(noise, valid)
                     
-                # Plot the progress
+                # Save history
                 if epoch % checkpoint_range == 0:
-                    #print('Epoch: %d, losses: %s:%s' % (epoch, d_loss, g_loss))
-                    
-                    gen_imgs = self.generator.predict([noise])
-                    gen_val = self.discriminator.predict([gen_imgs])
-                    
-                    #idx = np.random.randint(0, train_set.shape[0], batch_size)
-                    #train_val = self.discriminator.predict(train_set[idx])
-                    train_val = self.discriminator.predict([imgs])
-                    
-                    if valid_set is not None: 
-                        idx = np.random.randint(0, valid_set.shape[0], batch_size)
-                        test_val = self.discriminator.predict(valid_set[idx])
+                    if not store_history:
+                        if verbose:
+                            print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
                     else:
-                        test_val = np.zeros(batch_size)
-                    
-                    noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
-                    cont_val = self.discriminator.predict(noise)
-                    
-                    metric = self.metric_test(data_set, 1000)
-                    if verbose:
-                        print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                    
-                    hist_size = history['hist_size'] = history['hist_size']+1
-                    history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
-                    history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                    history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                    history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                    history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
-                    
-                    if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                        self.best_model = self.generator.get_weights()
-                        self.best_metric = np.mean(metric)
-                        history['best_metric'] = self.best_metric
+                        gen_imgs = self.generator.predict([noise])
+                        gen_val = self.discriminator.predict([gen_imgs])
                         
-                    self.history = history
+                        train_val = self.discriminator.predict([imgs])
+                        
+                        if valid_set is not None: 
+                            idx = np.random.randint(0, valid_set.shape[0], batch_size)
+                            test_val = self.discriminator.predict(valid_set[idx])
+                        else:
+                            test_val = np.zeros(batch_size)
+                        
+                        noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.inp_shape)
+                        cont_val = self.discriminator.predict(noise)
+                        
+                        metric = self.metric_test(data_set, 128)
+                        if verbose:
+                            print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                        
+                        hist_size = history['hist_size'] = history['hist_size']+1
+                        history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
+                        history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
+                        history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                        history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
+                        history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                        
+                        if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                            self.best_model = self.generator.get_weights()
+                            self.best_metric = np.mean(metric)
+                            history['best_metric'] = self.best_metric
+                            
+                        self.history = history
                     
                     if checkpoint_callback is not None:
                         checkpoint_callback()

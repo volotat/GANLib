@@ -1,6 +1,4 @@
-from GANLib import ProgGAN
-from GANLib import plotter
-from GANLib import utils
+from GANLib import ProgGAN, plotter, utils
 
 import keras 
 from keras.datasets import mnist, fashion_mnist, cifar10
@@ -15,7 +13,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import keras.backend as K
-from keras.utils import plot_model
 
 
 
@@ -227,7 +224,7 @@ if len(X_train.shape)<4:
     X_train = np.expand_dims(X_train, axis=3)
     
     
-#Run GAN for 20000 iterations
+#Build and train GAN
 gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)

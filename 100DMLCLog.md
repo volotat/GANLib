@@ -157,3 +157,10 @@
 **Today's progress** :  Some changes in ProgGAN code to make it more readable and clear.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/e04d2e005b734b5ce10c09210f449de91e860f51)
+
+
+## Day 24 : July 30 , 2018
+ 
+**Today's progress** :  Complete working on ProgGAN for now.
+
+**Link to work:**  [Commit]()
