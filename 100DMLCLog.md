@@ -163,4 +163,4 @@
  
 **Today's progress** :  Complete working on ProgGAN for now.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d2a0fcb96b15369cae8990383bd07a34cbbe57fe)
