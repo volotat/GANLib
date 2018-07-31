@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='GANlib',
-      version='0.0.2',
+      version='0.0.3',
       description='Keras based GANs library',
       url='https://github.com/Mylittlerapture/GANLib',
       author='Alex K',

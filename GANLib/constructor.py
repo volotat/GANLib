@@ -1,8 +1,10 @@
 # -------------------
 #  Constructor
 # -------------------
+# Some thoughts about syntaxes of future internal script language that will make possible to create any sort of exotic GANs within a few lines of code.
+
 # R - real data
-# F - fake noisy data
+# F - fake noisy data (not generated!)
 # L - labels
 # N - noise / latent representation
 

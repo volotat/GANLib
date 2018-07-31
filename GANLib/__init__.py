@@ -11,4 +11,4 @@ from .DiscoGAN import DiscoGAN
 from .GAN import GAN
 from .ProgGAN import ProgGAN
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
