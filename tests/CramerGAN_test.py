@@ -51,13 +51,13 @@ class conv_model_28():
         layer = Conv2D(32, (3,3), strides = 2, padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Flatten()(layer)
-        
+        '''
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        
-        validity = Dense(1, activation=self.disc_activation)(layer)
+        '''
+        validity = Dense(256, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
           
 class conv_model_32(): 
@@ -99,21 +99,21 @@ class conv_model_32():
         layer = Conv2D(32, (3,3), strides = 2, padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Flatten()(layer)
-        
+        '''
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Dense(128)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        
-        validity = Dense(1, activation=self.disc_activation)(layer)
+        '''
+        validity = Dense(256, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
         
         
         
-tests = { 'dataset':  (mnist,         mnist,         fashion_mnist, fashion_mnist, cifar10,       cifar10),
-          'img_path': ('mnist',       'mnist',       'fashion',     'fashion',     'cifar10',     'cifar10'),
-          'mode':     ('vanilla',     'stable',      'vanilla',     'stable',      'vanilla',     'stable'),
-          'model':    (conv_model_28, conv_model_28, conv_model_28, conv_model_28, conv_model_32, conv_model_32)
+tests = { 'dataset':  (mnist,         fashion_mnist, cifar10  ),
+          'img_path': ('mnist',       'fashion',     'cifar10'),
+          'mode':     ('vanilla',     'vanilla',     'vanilla'),
+          'model':    (conv_model_28, conv_model_28, conv_model_32)
         }
         
         

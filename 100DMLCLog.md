@@ -171,3 +171,10 @@
 **Today's progress** :  Made a template for CramerGAN on which I'm going to work next.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d7c17ff5e83e495397e0e8bda5d614d15c4663b0)
+
+
+## Day 26 : July 32 , 2018
+ 
+**Today's progress** :  A bit of work on CramerGAN, just building the understanding of how it works
+
+**Link to work:**  [Commit]()

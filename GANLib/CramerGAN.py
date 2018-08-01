@@ -4,7 +4,6 @@ from keras.optimizers import Adam
 import os
 import numpy as np
 
-
 from . import metrics
 from . import utils
 
@@ -159,26 +158,16 @@ class CramerGAN():
             # Sample noise as generator input
             noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
 
-            # Generate new images
+            # Generate two branch of new images
             gen_imgs = self.generator.predict([noise])
             
-            if self.mode == 'stable':
-                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
-
-                # Validate how good generated images looks like
-                val = self.discriminator.predict([gen_imgs])
-                crit = utils.Gravity(val, boundaries = [-1,1])
-                
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([imgs], valid)
-                d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
-                d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
-                
-            elif self.mode == 'vanilla':
-                d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
-                d_loss = (d_loss_real + d_loss_fake) / 2
+            # interpolate real and generated samples
+            epsilon = np.random.uniform(0.0, 1.0, batch_size)
+            int_imgs = epsilon * imgs + (1 - epsilon) * gen_imgs
+            
+            d_loss_real = self.discriminator.train_on_batch(imgs, valid)
+            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
+            d_loss = (d_loss_real + d_loss_fake) / 2
                 
             else: raise Exception("Mode '" + self.mode+ "' is unknown")
             
@@ -191,6 +180,8 @@ class CramerGAN():
 
             # Plot the progress
             if epoch % checkpoint_range == 0:
+                print(epoch)
+                '''
                 gen_val = self.discriminator.predict([gen_imgs])
                 
                 #idx = np.random.randint(0, train_set.shape[0], batch_size)
@@ -227,7 +218,7 @@ class CramerGAN():
                 
                 if checkpoint_callback is not None:
                     checkpoint_callback()
-        
+                '''
         
         
         if save_best_model:
