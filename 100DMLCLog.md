@@ -177,4 +177,4 @@
  
 **Today's progress** :  A bit of work on CramerGAN, just building the understanding of how it works
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/6e8ff2d5282a917840798ad5b1fea8c7c2577e62)
