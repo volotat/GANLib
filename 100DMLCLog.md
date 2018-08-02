@@ -184,4 +184,4 @@
  
 **Today's progress** :  Building CramerGAN.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b10865ceda5cbea0b08388a79e34f32ab753be77)
