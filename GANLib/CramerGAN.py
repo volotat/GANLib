@@ -147,6 +147,34 @@ class CramerGAN():
         for epoch in range(epochs):
             self.epoch = epoch
             
+            # Select a random batch of images
+            idx = np.random.randint(0, train_set.shape[0], batch_size)
+            imgs = train_set[idx]
+            
+            # Generate two branch of new images
+            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            gen_imgs_a = self.generator.predict([noise])
+            
+            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            gen_imgs_b = self.generator.predict([noise])
+            
+            # interpolate real and generated samples
+            epsilon = np.random.uniform(0.0, 1.0, batch_size)
+            int_imgs = epsilon * imgs + (1 - epsilon) * gen_imgs
+            
+            # ---------------------
+            #  Train Discriminator and Generator
+            # ---------------------
+            
+            #
+            L_C = self.disc_model.train_on_batch([imgs, gen_imgs_a], zeros)
+            #L_G = self.genr_model.train_on_batch([imgs, gen_imgs_a, gen_imgs_b], zeros)
+            # surrogate generator loss
+            L_S = self.genr_model.train_on_batch([imgs, gen_imgs_a, gen_imgs_b], zeros)
+            
+            
+            
+            '''
             # ---------------------
             #  Train Discriminator
             # ---------------------
@@ -161,9 +189,6 @@ class CramerGAN():
             # Generate two branch of new images
             gen_imgs = self.generator.predict([noise])
             
-            # interpolate real and generated samples
-            epsilon = np.random.uniform(0.0, 1.0, batch_size)
-            int_imgs = epsilon * imgs + (1 - epsilon) * gen_imgs
             
             d_loss_real = self.discriminator.train_on_batch(imgs, valid)
             d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
@@ -172,12 +197,12 @@ class CramerGAN():
             else: raise Exception("Mode '" + self.mode+ "' is unknown")
             
             # ---------------------
-            #  Train Generator
+            #  Train Discriminator and Generator
             # ---------------------
             
             # Train the generator
             g_loss = self.combined.train_on_batch([noise], valid)
-
+            '''
             # Plot the progress
             if epoch % checkpoint_range == 0:
                 print(epoch)
