@@ -1,8 +1,12 @@
 from keras.layers import Input
 from keras.models import Model, load_model
 from keras.optimizers import Adam
+from keras.layers import Lambda, Reshape
 import os
 import numpy as np
+
+import keras.backend as K
+import tensorflow as tf
 
 from . import metrics
 from . import utils
@@ -47,8 +51,8 @@ class CramerGAN():
             loss = 'logcosh'
             self.disc_activation = 'linear'
         elif self.mode == 'vanilla':
-            loss = 'binary_crossentropy'
-            self.disc_activation = 'sigmoid'
+            loss = 'mse'
+            self.disc_activation = 'linear'
         else: raise Exception("Mode '" + self.mode+ "' is unknown")
         
     
@@ -62,11 +66,43 @@ class CramerGAN():
             else:
                 # Build and compile the discriminator
                 self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=loss, optimizer=optimizer)
+                #self.discriminator.compile(loss=loss, optimizer=optimizer)
 
                 # Build the generator
                 self.generator = self.build_generator()
-
+                
+        self.G = self.generator
+        self.D = self.discriminator
+        
+        real_img = Input(shape=self.input_shape)
+        noise_a = Input(shape=(self.latent_dim,))
+        noise_b = Input(shape=(self.latent_dim,))
+        
+        hxr =  self.D([real_img])
+        hxga = self.D(self.G([noise_a]))
+        hxgb = self.D(self.G([noise_b]))
+        
+        self.discriminator.trainable = False
+        self.generator.trainable = True #K.l2_normalize(x[0] - x[1], axis=1) + K.l2_normalize(x[0] - x[2], axis=1) - K.l2_normalize(x[1] - x[2], axis=1)
+        L_G_tns = Lambda(lambda x: tf.norm(x[0] - x[1], axis=-1) + tf.norm(x[0] - x[2], axis=-1) - tf.norm(x[1] - x[2], axis=-1))([ hxr, hxga, hxgb])
+        L_G_tns = Lambda(lambda x: K.expand_dims(x, axis = -1))(L_G_tns)
+        self.genr_model = Model([real_img, noise_a, noise_b], L_G_tns)
+        self.genr_model.compile(loss=loss, optimizer=optimizer)
+        
+        
+        
+        self.discriminator.trainable = True
+        self.generator.trainable = False
+        
+        def crit(x, xg_):
+            return tf.norm(x - xg_, axis=-1) - tf.norm(x, axis=-1)
+        
+        L_D_tns = Lambda(lambda x: 10 - (crit(x[0], x[2]) - crit(x[1], x[2])))([hxr, hxga, hxgb])
+        L_D_tns = Lambda(lambda x: K.expand_dims(x, axis = -1))(L_D_tns)
+        self.disc_model = Model([real_img, noise_a, noise_b], L_D_tns)
+        self.disc_model.compile(loss=loss, optimizer=optimizer)
+        
+        '''
         # The generator takes noise and the target label as input
         # and generates the corresponding digit of that label
         noise = Input(shape=(self.latent_dim,))
@@ -83,6 +119,8 @@ class CramerGAN():
         # Trains generator to fool discriminator
         self.combined = Model([noise], valid)
         self.combined.compile(loss=loss, optimizer=optimizer)
+        '''
+        
             
         print('models builded')    
             
@@ -152,26 +190,23 @@ class CramerGAN():
             imgs = train_set[idx]
             
             # Generate two branch of new images
-            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-            gen_imgs_a = self.generator.predict([noise])
-            
-            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-            gen_imgs_b = self.generator.predict([noise])
+            noise_a = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            noise_b = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
             
             # interpolate real and generated samples
-            epsilon = np.random.uniform(0.0, 1.0, batch_size)
-            int_imgs = epsilon * imgs + (1 - epsilon) * gen_imgs
+            #epsilon = np.random.uniform(0.0, 1.0, batch_size)
+            #int_imgs = epsilon * imgs + (1 - epsilon) * gen_imgs
             
             # ---------------------
             #  Train Discriminator and Generator
             # ---------------------
             
             #
-            L_C = self.disc_model.train_on_batch([imgs, gen_imgs_a], zeros)
-            #L_G = self.genr_model.train_on_batch([imgs, gen_imgs_a, gen_imgs_b], zeros)
-            # surrogate generator loss
-            L_S = self.genr_model.train_on_batch([imgs, gen_imgs_a, gen_imgs_b], zeros)
+            #L_C = self.disc_model.train_on_batch([imgs, noise_a], zeros)
             
+           
+            d_loss = self.disc_model.train_on_batch([imgs, noise_a, noise_b], fake)
+            g_loss = self.genr_model.train_on_batch([imgs, noise_a, noise_b], fake)
             
             
             '''
@@ -205,7 +240,7 @@ class CramerGAN():
             '''
             # Plot the progress
             if epoch % checkpoint_range == 0:
-                print(epoch)
+                print(epoch, d_loss, g_loss)
                 '''
                 gen_val = self.discriminator.predict([gen_imgs])
                 
@@ -240,10 +275,10 @@ class CramerGAN():
                     history['best_metric'] = self.best_metric
                     
                 self.history = history
-                
+                '''
                 if checkpoint_callback is not None:
                     checkpoint_callback()
-                '''
+                
         
         
         if save_best_model:

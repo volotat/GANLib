@@ -185,3 +185,10 @@
 **Today's progress** :  Building CramerGAN.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b10865ceda5cbea0b08388a79e34f32ab753be77)
+
+
+## Day 27 : July 33 , 2018
+ 
+**Today's progress** :  Running first tests on CramerGAN and it is kind of works. What is very surprising, because it far from complete.
+
+**Link to work:**  [Commit]()

@@ -7,6 +7,7 @@ from . import utils
 
 from .AAE import AAE
 from .CGAN import CGAN
+from .CramerGAN import CramerGAN
 from .DiscoGAN import DiscoGAN
 from .GAN import GAN
 from .ProgGAN import ProgGAN
