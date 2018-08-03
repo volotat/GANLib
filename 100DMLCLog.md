@@ -173,22 +173,22 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d7c17ff5e83e495397e0e8bda5d614d15c4663b0)
 
 
-## Day 26 : July 32 , 2018
+## Day 26 : June 1 , 2018
  
 **Today's progress** :  A bit of work on CramerGAN, just building the understanding of how it works
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/6e8ff2d5282a917840798ad5b1fea8c7c2577e62)
 
 
-## Day 27 : July 33 , 2018
+## Day 27 : June 2 , 2018
  
 **Today's progress** :  Building CramerGAN.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b10865ceda5cbea0b08388a79e34f32ab753be77)
 
 
-## Day 27 : July 33 , 2018
+## Day 28 : June 3 , 2018
  
 **Today's progress** :  Running first tests on CramerGAN and it is kind of works. What is very surprising, because it far from complete.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/7a384068efe5dc2353b63a797a9ba259c1debab1)
