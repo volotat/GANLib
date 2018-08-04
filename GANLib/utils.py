@@ -89,3 +89,6 @@ class MiniBatchStddev(Layer): #again position of channels matter!
 
 def wasserstein_loss(y_true, y_pred):
     return K.mean(y_true * y_pred)
+    
+def ident_loss(y_true, y_pred): 
+    return y_pred

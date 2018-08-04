@@ -12,6 +12,8 @@ from keras.optimizers import Adam, RMSprop, Nadam
 import matplotlib.pyplot as plt
 import numpy as np
 
+#Do not use BatchNormalization with CramerGAN! It will conflict with the gradient penalty.
+
 class conv_model_28(): 
     def build_generator(self):
         input_lat = Input(shape=(self.latent_dim,))
@@ -19,11 +21,9 @@ class conv_model_28():
         layer = input_lat
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        #layer = BatchNormalization(momentum=0.8)(layer)
         
         layer = Dense(784)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        #layer = BatchNormalization(momentum=0.8)(layer)
         
         layer = Reshape((7,7,16))(layer)
         
@@ -31,12 +31,10 @@ class conv_model_28():
         layer = UpSampling2D(2)(layer)
         layer = Conv2D(8, (3,3), padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) #14x14x8
-        #layer = BatchNormalization(momentum=0.8, axis = -1)(layer)
         
         layer = UpSampling2D(2)(layer)
         layer = Conv2D(4, (3,3), padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) #28x28x4
-        #layer = BatchNormalization(momentum=0.8, axis = -1)(layer)
         
         img = Conv2D(1, (1,1), padding='same')(layer)
         return Model(input_lat, img)
@@ -51,13 +49,7 @@ class conv_model_28():
         layer = Conv2D(32, (3,3), strides = 2, padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Flatten()(layer)
-        '''
-        layer = Dense(256)(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        layer = Dense(128)(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        '''
-        validity = Dense(256, activation=self.disc_activation)(layer)
+        validity = Dense(256, activation=self.disc_activation)(layer) #more outputs is better
         return Model(input_img, validity)    
           
 class conv_model_32(): 
@@ -67,11 +59,9 @@ class conv_model_32():
         layer = input_lat
         layer = Dense(512)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        #layer = BatchNormalization(momentum=0.8)(layer)
         
         layer = Dense(1024)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
-        #layer = BatchNormalization(momentum=0.8)(layer)
         
         layer = Reshape((8,8,16))(layer)
         
@@ -79,12 +69,10 @@ class conv_model_32():
         layer = UpSampling2D(2)(layer)
         layer = Conv2D(16, (3,3), padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) #16x16x16
-        #layer = BatchNormalization(momentum=0.8, axis = -1)(layer)
         
         layer = UpSampling2D(2)(layer)
         layer = Conv2D(8, (3,3), padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer) #32x32x8
-        #layer = BatchNormalization(momentum=0.8, axis = -1)(layer)
         
         img = Conv2D(3, (1,1), padding='same')(layer)
         return Model(input_lat, img)
@@ -99,12 +87,7 @@ class conv_model_32():
         layer = Conv2D(32, (3,3), strides = 2, padding='same')(layer)
         layer = LeakyReLU(alpha=0.2)(layer)
         layer = Flatten()(layer)
-        '''
-        layer = Dense(256)(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        layer = Dense(128)(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        '''
+        
         validity = Dense(256, activation=self.disc_activation)(layer)
         return Model(input_img, validity)    
         
