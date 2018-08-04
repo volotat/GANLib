@@ -198,4 +198,4 @@
  
 **Today's progress** :  Most important code for CramerGAN is now implemented. There are some tensorflow code for now, I will rewrite it as Keras backend later.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/c0a5e0bf3f213d33ad53b07a8911210ee5e8bd7e)
