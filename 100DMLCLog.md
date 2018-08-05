@@ -205,5 +205,5 @@
  
 **Today's progress** :  CramerGAN almost completed, just few minor things left. It seems to work fine. 
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d74e2735e3e723e8867dc4241f069e900be1b13c)
 
