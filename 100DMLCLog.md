@@ -194,8 +194,16 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/7a384068efe5dc2353b63a797a9ba259c1debab1)
 
 
-## Day 28 : August 4, 2018
+## Day 29 : August 4, 2018
  
 **Today's progress** :  Most important code for CramerGAN is now implemented. There are some tensorflow code for now, I will rewrite it as Keras backend later.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/c0a5e0bf3f213d33ad53b07a8911210ee5e8bd7e)
+
+
+## Day 30 : August 5, 2018
+ 
+**Today's progress** :  CramerGAN almost completed, just few minor things left. It seems to work fine. 
+
+**Link to work:**  [Commit]()
+

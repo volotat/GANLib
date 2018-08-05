@@ -149,6 +149,6 @@ for i in range(len(tests['dataset'])):
     def callback():
         path = 'images/CramerGAN/'+tests['img_path'][i]+'/conv_'+tests['mode'][i]
         sample_images(gan.generator, path+'.png')
-        #plotter.save_hist_image(gan.history, path+'_hist.png')
+        plotter.save_hist_image(gan.history, path+'_hist.png')
         
     gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)

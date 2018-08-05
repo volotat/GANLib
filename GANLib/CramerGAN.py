@@ -12,7 +12,7 @@ from . import metrics
 from . import utils
 
 #                   Cramer GAN
-#   Paper: https://arxiv.org/pdf/1705.10743.pdf (the one that I trying to implement)
+#   Paper: https://arxiv.org/pdf/1705.10743.pdf (the one that implemented)
 #   Newer version: https://openreview.net/pdf?id=S1m6h21Cb
 
 #       Description:
@@ -49,17 +49,10 @@ class CramerGAN():
         
     def build_models(self, optimizer = None, path = ''):
         if optimizer is None:
-            optimizer = Adam(0.0002, 0.5)
+            optimizer = Adam(0.0002, 0.5, 0.9)
             
-        if self.mode == 'stable':
-            loss = 'logcosh'
-            self.disc_activation = 'linear'
-        elif self.mode == 'vanilla':
-            loss = 'binary_crossentropy'
-            self.disc_activation = 'linear'
-        else: raise Exception("Mode '" + self.mode+ "' is unknown")
+        self.disc_activation = 'linear'
         
-    
         self.path = path
         if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
             self.generator = load_model(path+'/generator.h5')
@@ -73,18 +66,22 @@ class CramerGAN():
                 self.discriminator = self.build_discriminator()
                 
                 
-        self.G = self.generator
-        self.D = self.discriminator
+        G = self.generator
+        D = self.discriminator
         
         real_img = Input(shape=self.input_shape)
         noise_a = Input(shape=(self.latent_dim,))
         noise_b = Input(shape=(self.latent_dim,))
-        genr_img = self.G([noise_a])
         
-        hxr =  self.D([real_img])
-        hxga = self.D(self.G([noise_a]))
-        hxgb = self.D(self.G([noise_b]))
+        genr_img = G([noise_a])
+        hxr =  D([real_img])
+        hxga = D(G([noise_a]))
+        hxgb = D(G([noise_b]))
         
+        
+        #Define the critic:
+        def crit(x, xg_):
+            return tf.norm(x - xg_, axis=-1) - tf.norm(x, axis=-1)
         
         #-------------------------------
         # Graph for Generator
@@ -93,8 +90,8 @@ class CramerGAN():
         self.discriminator.trainable = False
         self.generator.trainable = True 
         
-        L_G_tns = Lambda(lambda x: tf.norm(x[0] - x[1], axis=-1) + tf.norm(x[0] - x[2], axis=-1) - tf.norm(x[1] - x[2], axis=-1))([hxr, hxga, hxgb])
-        L_G_tns = Lambda(lambda x: K.expand_dims(x, axis = -1))(L_G_tns)
+        #Compute the generator loss:
+        L_G_tns = Lambda(lambda x: tf.reduce_mean(tf.norm(x[0] - x[1], axis=-1) + tf.norm(x[0] - x[2], axis=-1) - tf.norm(x[1] - x[2], axis=-1)))([hxr, hxga, hxgb])
         
         self.genr_model = Model([real_img, noise_a, noise_b], L_G_tns)
         self.genr_model.compile(loss=utils.ident_loss, optimizer=optimizer)
@@ -107,21 +104,22 @@ class CramerGAN():
         self.discriminator.trainable = True
         self.generator.trainable = False
         
-        def crit(x, xg_):
-            return tf.norm(x - xg_, axis=-1) - tf.norm(x, axis=-1)
+        #compute gradient penalty with respect to weighted average between real and generated images
+        def f_ddx(real, genr):
+            epsilon = tf.random_uniform([], 0.0, 1.0)
+            x_hat = epsilon * real + (1 - epsilon) * genr
+            d_hat = crit(D(x_hat), hxgb)
+            
+            ddx = tf.gradients(d_hat, x_hat)[0]
+            ddx = tf.norm(ddx, axis=1)
+            ddx = tf.reduce_mean(tf.square(ddx - 1.0) * self.lambda_scale)
+            
+            return ddx
         
-        
-        
-        epsilon = tf.random_uniform([], 0.0, 1.0)
-        x_hat = epsilon * real_img + (1 - epsilon) * genr_img
-        d_hat = crit(self.D(x_hat), hxgb)
-        
-        ddx = tf.gradients(d_hat, x_hat)[0]
-        ddx = tf.norm(ddx, axis=1)
-        ddx = tf.reduce_mean(tf.square(ddx - 1.0) * self.lambda_scale)
-        
-        L_D_tns = Lambda(lambda x: (ddx - (crit(x[0], x[2]) - crit(x[1], x[2]))))([hxr, hxga, hxgb])
-        L_D_tns = Lambda(lambda x: K.expand_dims(x, axis = -1))(L_D_tns)
+        #Compute the surrogate generator loss:
+        L_S_tns = Lambda(lambda x: tf.reduce_mean(crit(x[0], x[2]) - crit(x[1], x[2])))([hxr, hxga, hxgb])
+        #Compute the critic loss:
+        L_D_tns = Lambda(lambda x: (f_ddx(x[0], x[1]) - x[2]))([real_img, genr_img, L_S_tns])
         
         self.disc_model = Model([real_img, noise_a, noise_b], L_D_tns)
         self.disc_model.compile(loss=utils.ident_loss, optimizer=optimizer)
@@ -169,13 +167,11 @@ class CramerGAN():
             train_set = data_set
             valid_set = None
     
-        #collect statistical info of data
+        # collect statistical info of data
         data_set_std = np.std(data_set,axis = 0)
         data_set_mean = np.mean(data_set,axis = 0)
     
-        # Adversarial ground truths
-        #valid = np.ones((batch_size, 1))
-        #fake = np.zeros((batch_size, 1))
+        # target values do not affect the network, so it does not matter what they are ¯\_(ツ)_/¯ 
         dummy = np.zeros((batch_size, 1))
 
         #mean min max
@@ -188,9 +184,9 @@ class CramerGAN():
                     'best_metric':0,
                     'hist_size'  :0}
         
-        for epoch in range(epochs):
-            self.epoch = epoch
-            
+        
+        
+        def get_data():
             # Select a random batch of images
             idx = np.random.randint(0, train_set.shape[0], batch_size)
             imgs = train_set[idx]
@@ -198,53 +194,35 @@ class CramerGAN():
             # Generate noise for two branch of generated images
             noise_a = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
             noise_b = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+                
+            return imgs, noise_a, noise_b
+        
+        
+        for epoch in range(epochs):
+            self.epoch = epoch
             
-            # ---------------------
-            #  Train Discriminator and Generator
-            # ---------------------
-            
-            #target values do not affect the network, so it does not matter what they are ¯\_(ツ)_/¯ 
-            d_loss = self.disc_model.train_on_batch([imgs, noise_a, noise_b], dummy)
-            g_loss = self.genr_model.train_on_batch([imgs, noise_a, noise_b], dummy)
-            
-            
-            '''
             # ---------------------
             #  Train Discriminator
             # ---------------------
-
-            # Select a random batch of images
-            idx = np.random.randint(0, train_set.shape[0], batch_size)
-            imgs = train_set[idx]
-
-            # Sample noise as generator input
-            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-            # Generate two branch of new images
-            gen_imgs = self.generator.predict([noise])
             
+            d_iters = 3
+            d_loss = 0
+            for _ in range(0, d_iters):
+                imgs, noise_a, noise_b = get_data()
+                d_loss += self.disc_model.train_on_batch([imgs, noise_a, noise_b], dummy) / d_iters
             
-            d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
-            d_loss = (d_loss_real + d_loss_fake) / 2
-                
-            else: raise Exception("Mode '" + self.mode+ "' is unknown")
             
             # ---------------------
-            #  Train Discriminator and Generator
+            #  Train Generator
             # ---------------------
             
-            # Train the generator
-            g_loss = self.combined.train_on_batch([noise], valid)
-            '''
-            # Plot the progress
+            imgs, noise_a, noise_b = get_data()
+            g_loss = self.genr_model.train_on_batch([imgs, noise_a, noise_b], dummy)
+
+            # Save progress info
             if epoch % checkpoint_range == 0:
-                print(epoch, d_loss, g_loss)
-                '''
+                gen_imgs = self.generator.predict([noise_a])
                 gen_val = self.discriminator.predict([gen_imgs])
-                
-                #idx = np.random.randint(0, train_set.shape[0], batch_size)
-                #train_val = self.discriminator.predict(train_set[idx])
                 train_val = self.discriminator.predict([imgs])
                 
                 if valid_set is not None: 
@@ -256,7 +234,7 @@ class CramerGAN():
                 noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
                 cont_val = self.discriminator.predict(noise)
                 
-                metric = self.metric_test(train_set, 1000)
+                metric = self.metric_test(train_set, 128)
                 
                 if verbose:
                     print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
@@ -268,13 +246,13 @@ class CramerGAN():
                 history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
                 history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
                 
-                if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                if (np.mean(metric)*0.98 < self.best_metric or self.best_model == None):
                     self.best_model = self.generator.get_weights()
                     self.best_metric = np.mean(metric)
                     history['best_metric'] = self.best_metric
                     
                 self.history = history
-                '''
+                
                 if checkpoint_callback is not None:
                     checkpoint_callback()
                 
