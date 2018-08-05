@@ -64,7 +64,8 @@ gen_imgs = gan.generator.predict([noise])
 #### Current progress for each module:
 GAN: completed  
 CGAN: completed  
-ProgGAN: completed  
+ProgGAN: completed 
+CramerGAN: in progress
 DiscoGAN: works as supposed to, but do not store all necessary history  
 AAE: in progress  
-CramerGAN: just started
+
