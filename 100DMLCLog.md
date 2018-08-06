@@ -207,3 +207,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d74e2735e3e723e8867dc4241f069e900be1b13c)
 
+
+## Day 31 : August 6, 2018
+ 
+**Today's progress** :  CramerGAN is now completed. All tensorflow code replaced with Keras backend.
+
+**Link to work:**  [Commit]()

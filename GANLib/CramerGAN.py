@@ -6,7 +6,6 @@ import os
 import numpy as np
 
 import keras.backend as K
-import tensorflow as tf
 
 from . import metrics
 from . import utils
@@ -16,7 +15,8 @@ from . import utils
 #   Newer version: https://openreview.net/pdf?id=S1m6h21Cb
 
 #       Description:
-
+#   Cramer distance is a different approach to measure distance between probabilities 
+#   that has some advantages over Wasserstein metric.
 
 class CramerGAN():
 
@@ -80,8 +80,11 @@ class CramerGAN():
         
         
         #Define the critic:
+        def norm(x, axis):
+            return K.sqrt(K.sum(K.square(x), axis=axis))
+            
         def crit(x, xg_):
-            return tf.norm(x - xg_, axis=-1) - tf.norm(x, axis=-1)
+            return norm(x - xg_, axis=-1) - norm(x, axis=-1)
         
         #-------------------------------
         # Graph for Generator
@@ -91,7 +94,7 @@ class CramerGAN():
         self.generator.trainable = True 
         
         #Compute the generator loss:
-        L_G_tns = Lambda(lambda x: tf.reduce_mean(tf.norm(x[0] - x[1], axis=-1) + tf.norm(x[0] - x[2], axis=-1) - tf.norm(x[1] - x[2], axis=-1)))([hxr, hxga, hxgb])
+        L_G_tns = Lambda(lambda x: K.mean(norm(x[0] - x[1], axis=-1) + norm(x[0] - x[2], axis=-1) - norm(x[1] - x[2], axis=-1)))([hxr, hxga, hxgb])
         
         self.genr_model = Model([real_img, noise_a, noise_b], L_G_tns)
         self.genr_model.compile(loss=utils.ident_loss, optimizer=optimizer)
@@ -106,18 +109,18 @@ class CramerGAN():
         
         #compute gradient penalty with respect to weighted average between real and generated images
         def f_ddx(real, genr):
-            epsilon = tf.random_uniform([], 0.0, 1.0)
+            epsilon = K.random_uniform([], 0.0, 1.0)
             x_hat = epsilon * real + (1 - epsilon) * genr
             d_hat = crit(D(x_hat), hxgb)
             
-            ddx = tf.gradients(d_hat, x_hat)[0]
-            ddx = tf.norm(ddx, axis=1)
-            ddx = tf.reduce_mean(tf.square(ddx - 1.0) * self.lambda_scale)
+            ddx = K.gradients(d_hat, x_hat)[0]
+            ddx = norm(ddx, axis=1)
+            ddx = K.mean(K.square(ddx - 1.0) * self.lambda_scale)
             
             return ddx
         
         #Compute the surrogate generator loss:
-        L_S_tns = Lambda(lambda x: tf.reduce_mean(crit(x[0], x[2]) - crit(x[1], x[2])))([hxr, hxga, hxgb])
+        L_S_tns = Lambda(lambda x: K.mean(crit(x[0], x[2]) - crit(x[1], x[2])))([hxr, hxga, hxgb])
         #Compute the critic loss:
         L_D_tns = Lambda(lambda x: (f_ddx(x[0], x[1]) - x[2]))([real_img, genr_img, L_S_tns])
         
