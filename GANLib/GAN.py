@@ -17,7 +17,7 @@ from . import utils
 #   that very similar to given dataset from random noise.
 
 
-class GAN():
+class GAN(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
         
@@ -43,34 +43,19 @@ class GAN():
         self.epoch = 0
         self.history = None
         
-    def build_models(self, optimizer = None, path = ''):
-        if optimizer is None:
-            optimizer = Adam(0.0002, 0.5)
-            
-        if self.mode == 'stable':
-            loss = 'logcosh'
-            self.disc_activation = 'linear'
-        elif self.mode == 'vanilla':
-            loss = 'binary_crossentropy'
-            self.disc_activation = 'sigmoid'
-        else: raise Exception("Mode '" + self.mode+ "' is unknown")
         
-    
-        self.path = path
-        if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
-            self.generator = load_model(path+'/generator.h5')
-            self.discriminator = load_model(path+'/discriminator.h5')
+    def set_models_params(self, optimizer):
+        if optimizer is None:   
+            self.optimizer = Adam(0.0002, 0.5)
         else:
-            if self.build_discriminator is None or self.build_generator is None:
-                raise Exception("Model building functions are not defined")
-            else:
-                # Build and compile the discriminator
-                self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=loss, optimizer=optimizer)
-
-                # Build the generator
-                self.generator = self.build_generator()
-
+            self.optimizer = optimizer
+        
+        self.loss = 'binary_crossentropy'
+        self.disc_activation = 'sigmoid'
+        
+    def build_graph(self):
+        self.discriminator.compile(loss=self.loss, optimizer=self.optimizer)
+    
         # The generator takes noise and the target label as input
         # and generates the corresponding digit of that label
         noise = Input(shape=(self.latent_dim,))
@@ -86,8 +71,94 @@ class GAN():
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         self.combined = Model([noise], valid)
-        self.combined.compile(loss=loss, optimizer=optimizer)
+        self.combined.compile(loss=self.loss, optimizer=self.optimizer)
+        
+        
+        
+    def train_on_batch(self, train_set, batch_size):
+        # Select a random batch of images
+        idx = np.random.randint(0, train_set.shape[0], batch_size)
+        imgs = train_set[idx]
+    
+        # ---------------------
+        #  Train Discriminator
+        # ---------------------
+
+        # Sample noise as generator input
+        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+
+        # Generate new images
+        gen_imgs = self.generator.predict([noise])
+        
+        if self.mode == 'stable':
+            trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
+
+            # Validate how good generated images looks like
+            val = self.discriminator.predict([gen_imgs])
+            crit = utils.Gravity(val, boundaries = [-1,1])
             
+            # Train the discriminator
+            d_loss_real = self.discriminator.train_on_batch([imgs], self.valid)
+            d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
+            d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -self.valid)
+            d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
+            
+        elif self.mode == 'vanilla':
+            d_loss_real = self.discriminator.train_on_batch(imgs, self.valid)
+            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, self.fake)
+            d_loss = (d_loss_real + d_loss_fake) / 2
+            
+        else: raise Exception("Mode '" + self.mode+ "' is unknown")
+        
+        # ---------------------
+        #  Train Generator
+        # ---------------------
+        
+        # Train the generator
+        g_loss = self.combined.train_on_batch([noise], self.valid)
+        
+        return d_loss, g_loss
+        
+        
+    def build_models(self, optimizer = None, path = ''):
+    
+        '''    
+        if self.mode == 'stable':
+            loss = 'logcosh'
+            self.disc_activation = 'linear'
+        elif self.mode == 'vanilla':
+            loss = 'binary_crossentropy'
+            self.disc_activation = 'sigmoid'
+        else: raise Exception("Mode '" + self.mode+ "' is unknown")
+        
+        
+        self.path = path
+        if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
+            self.generator = load_model(path+'/generator.h5')
+            self.discriminator = load_model(path+'/discriminator.h5')
+        else:
+            if self.build_discriminator is None or self.build_generator is None:
+                raise Exception("Model building functions are not defined")
+            else:
+                # Build and compile the discriminator
+                self.discriminator = self.build_discriminator()
+                self.discriminator.compile(loss=loss, optimizer=optimizer)
+
+                # Build the generator
+                self.generator = self.build_generator()
+        '''
+        
+        self.set_models_params()
+        
+        # Build models
+        if self.build_discriminator is None or self.build_generator is None:
+            raise Exception("Model building functions are not defined")
+        else:
+            self.discriminator = self.build_discriminator()
+            self.generator = self.build_generator()
+        
+        self.build_graph(optimizer)
+        
         print('models builded')    
             
     def save(self):
@@ -135,8 +206,8 @@ class GAN():
         data_set_mean = np.mean(data_set,axis = 0)
     
         # Adversarial ground truths
-        valid = np.ones((batch_size, 1))
-        fake = np.zeros((batch_size, 1))
+        self.valid = np.ones((batch_size, 1))
+        self.fake = np.zeros((batch_size, 1))
 
         #mean min max
         max_hist_size = epochs//checkpoint_range + 1
@@ -151,53 +222,16 @@ class GAN():
         for epoch in range(epochs):
             self.epoch = epoch
             
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-
-            # Select a random batch of images
-            idx = np.random.randint(0, train_set.shape[0], batch_size)
-            imgs = train_set[idx]
-
-            # Sample noise as generator input
-            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-            # Generate new images
-            gen_imgs = self.generator.predict([noise])
-            
-            if self.mode == 'stable':
-                trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
-
-                # Validate how good generated images looks like
-                val = self.discriminator.predict([gen_imgs])
-                crit = utils.Gravity(val, boundaries = [-1,1])
-                
-                # Train the discriminator
-                d_loss_real = self.discriminator.train_on_batch([imgs], valid)
-                d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-                d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -valid)
-                d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
-                
-            elif self.mode == 'vanilla':
-                d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
-                d_loss = (d_loss_real + d_loss_fake) / 2
-                
-            else: raise Exception("Mode '" + self.mode+ "' is unknown")
-            
-            # ---------------------
-            #  Train Generator
-            # ---------------------
-            
-            # Train the generator
-            g_loss = self.combined.train_on_batch([noise], valid)
+            d_loss, g_loss = self.train_on_batch(train_set, batch_size)
 
             # Plot the progress
             if epoch % checkpoint_range == 0:
+                noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+                gen_imgs = self.generator.predict([noise])
                 gen_val = self.discriminator.predict([gen_imgs])
                 
-                #idx = np.random.randint(0, train_set.shape[0], batch_size)
-                #train_val = self.discriminator.predict(train_set[idx])
+                idx = np.random.randint(0, train_set.shape[0], batch_size)
+                imgs = train_set[idx]
                 train_val = self.discriminator.predict([imgs])
                 
                 if valid_set is not None: 
@@ -209,7 +243,7 @@ class GAN():
                 noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
                 cont_val = self.discriminator.predict(noise)
                 
-                metric = self.metric_test(train_set, 1000)
+                metric = self.metric_test(train_set, 128)
                 
                 if verbose:
                     print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
@@ -239,4 +273,8 @@ class GAN():
         self.epoch = epochs
         checkpoint_callback()   
         
-        return self.history    
+        return self.history   
+
+
+        
+   
