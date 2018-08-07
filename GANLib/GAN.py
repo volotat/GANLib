@@ -148,7 +148,7 @@ class GAN(object):
                 self.generator = self.build_generator()
         '''
         
-        self.set_models_params()
+        self.set_models_params(optimizer)
         
         # Build models
         if self.build_discriminator is None or self.build_generator is None:
@@ -157,7 +157,7 @@ class GAN(object):
             self.discriminator = self.build_discriminator()
             self.generator = self.build_generator()
         
-        self.build_graph(optimizer)
+        self.build_graph()
         
         print('models builded')    
             
