@@ -219,5 +219,5 @@
  
 **Today's progress** :  Start to rewrite library in a way that all GANs would be parents of original GAN. This would reduce amount of unnecessary code.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/c6c1925920b4829477bd28f381003c345e8f8f1f)
 
