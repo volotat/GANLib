@@ -215,4 +215,4 @@ for i in range(len(tests['dataset'])):
         sample_images(gan.generator, path+'.png')
         plotter.save_hist_image(gan.history, path+'_hist.png')
         
-    gan.train(X_train, Y_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)
+    gan.train(zip(X_train, Y_train), epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)

@@ -217,7 +217,14 @@
 
 ## Day 32 : August 7, 2018
  
-**Today's progress** :  Start to rewrite library in a way that all GANs would be parents of original GAN. This would reduce amount of unnecessary code.
+**Today's progress** :  Start to rewrite library in a way that all GANs would be child classes of original GAN. This would reduce amount of unnecessary code.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/c6c1925920b4829477bd28f381003c345e8f8f1f)
+
+
+## Day 33 : August 8, 2018
+ 
+**Today's progress** :  Continue rewriting library in better way.
+
+**Link to work:**  [Commit]()
 

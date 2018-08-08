@@ -49,7 +49,7 @@ class CramerGAN(GAN):
         hxgb = D(G([noise_b]))
         
         def norm(x, axis):
-            return K.sqrt(K.sum(K.square(x), axis=axis))
+            return K.sqrt(K.sum(K.square(x), axis=axis)) #, keepdims=True
             
         #Define the critic:    
         def crit(x, xg_):
