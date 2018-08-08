@@ -224,7 +224,7 @@
 
 ## Day 33 : August 8, 2018
  
-**Today's progress** :  Continue rewriting library in better way.
+**Today's progress** :  Continue rewriting library in a better way.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/89c4da2762eea202fab70f3ab579bec5d90ed660)
 
