@@ -107,7 +107,7 @@ class CramerGAN(GAN):
             
         return imgs, noise_a, noise_b    
         
-    def train_on_batch(self, train_set, batch_size):
+    def train_on_batch(self, batch_size):
         # target values do not affect the network, so it does not matter what they are ¯\_(ツ)_/¯ 
         self.dummy = np.zeros((batch_size, 1))
         
@@ -118,7 +118,7 @@ class CramerGAN(GAN):
         d_iters = 3
         d_loss = 0
         for _ in range(0, d_iters):
-            imgs, noise_a, noise_b = self.get_data(train_set, batch_size)
+            imgs, noise_a, noise_b = self.get_data(self.train_set, batch_size)
             d_loss += self.disc_model.train_on_batch([imgs, noise_a, noise_b], self.dummy) / d_iters
         
         
@@ -126,7 +126,7 @@ class CramerGAN(GAN):
         #  Train Generator
         # ---------------------
         
-        imgs, noise_a, noise_b = self.get_data(train_set, batch_size)
+        imgs, noise_a, noise_b = self.get_data(self.train_set, batch_size)
         g_loss = self.genr_model.train_on_batch([imgs, noise_a, noise_b], self.dummy)
         
         return d_loss, g_loss

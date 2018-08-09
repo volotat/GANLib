@@ -95,7 +95,6 @@ class conv_model_32():
         
 tests = { 'dataset':  (mnist,         fashion_mnist, cifar10  ),
           'img_path': ('mnist',       'fashion',     'cifar10'),
-          'mode':     ('vanilla',     'vanilla',     'vanilla'),
           'model':    (conv_model_28, conv_model_28, conv_model_32)
         }
         
@@ -141,13 +140,13 @@ for i in range(len(tests['dataset'])):
         X_train = np.expand_dims(X_train, axis=3)
 
     #Run GAN for 20000 iterations
-    gan = CramerGAN(X_train.shape[1:], noise_dim, mode = tests['mode'][i])
+    gan = CramerGAN(X_train.shape[1:], noise_dim)
     gan.build_generator = lambda self=gan: model.build_generator(self)
     gan.build_discriminator = lambda self=gan: model.build_discriminator(self)
     gan.build_models()
 
     def callback():
-        path = 'images/CramerGAN/'+tests['img_path'][i]+'/conv_'+tests['mode'][i]
+        path = 'images/CramerGAN/'+tests['img_path'][i]+'/conv_'
         sample_images(gan.generator, path+'.png')
         plotter.save_hist_image(gan.history, path+'_hist.png')
         

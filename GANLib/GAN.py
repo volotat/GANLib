@@ -29,10 +29,9 @@ class GAN(object):
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, mode = 'vanilla'):
+    def __init__(self, input_shape, latent_dim = 100):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
-        self.mode = mode
         
         self.build_discriminator = None
         self.build_generator = None
@@ -73,12 +72,27 @@ class GAN(object):
         self.combined = Model([noise], valid)
         self.combined.compile(loss=self.loss, optimizer=self.optimizer)
         
+    def prepare_data(self, data_set, validation_split, batch_size):
+        if 0. < validation_split < 1.:
+            split_at = int(data_set.shape[0] * (1. - validation_split))
+            self.train_set = data_set[:split_at]
+            self.valid_set = data_set[split_at:]
+        else:
+            self.train_set = data_set
+            self.valid_set = None
+    
+        #collect statistical info of data
+        self.data_set_std = np.std(data_set,axis = 0)
+        self.data_set_mean = np.mean(data_set,axis = 0)
+    
+        # Adversarial ground truths
+        self.valid = np.ones((batch_size, 1))
+        self.fake = np.zeros((batch_size, 1))
         
-        
-    def train_on_batch(self, train_set, batch_size):
+    def train_on_batch(self, batch_size):
         # Select a random batch of images
-        idx = np.random.randint(0, train_set.shape[0], batch_size)
-        imgs = train_set[idx]
+        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
+        imgs = self.train_set[idx]
     
         # ---------------------
         #  Train Discriminator
@@ -90,25 +104,9 @@ class GAN(object):
         # Generate new images
         gen_imgs = self.generator.predict([noise])
         
-        if self.mode == 'stable':
-            trash_imgs = np.random.normal(data_set_mean, data_set_std, (batch_size,) + self.input_shape)
-
-            # Validate how good generated images looks like
-            val = self.discriminator.predict([gen_imgs])
-            crit = utils.Gravity(val, boundaries = [-1,1])
-            
-            # Train the discriminator
-            d_loss_real = self.discriminator.train_on_batch([imgs], self.valid)
-            d_loss_fake = self.discriminator.train_on_batch([gen_imgs], crit)
-            d_loss_trsh = self.discriminator.train_on_batch([trash_imgs], -self.valid)
-            d_loss = (d_loss_real + d_loss_fake + d_loss_trsh) / 3
-            
-        elif self.mode == 'vanilla':
-            d_loss_real = self.discriminator.train_on_batch(imgs, self.valid)
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, self.fake)
-            d_loss = (d_loss_real + d_loss_fake) / 2
-            
-        else: raise Exception("Mode '" + self.mode+ "' is unknown")
+        d_loss_real = self.discriminator.train_on_batch(imgs, self.valid)
+        d_loss_fake = self.discriminator.train_on_batch(gen_imgs, self.fake)
+        d_loss = (d_loss_real + d_loss_fake) / 2
         
         # ---------------------
         #  Train Generator
@@ -164,6 +162,29 @@ class GAN(object):
     def save(self):
         self.generator.save(self.path+'/generator.h5')
         self.discriminator.save(self.path+'/discriminator.h5')
+        
+        
+    def test_network(self, batch_size):
+        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        gen_imgs = self.generator.predict([noise])
+        gen_val = self.discriminator.predict([gen_imgs])
+        
+        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
+        imgs = self.train_set[idx]
+        train_val = self.discriminator.predict([imgs])
+        
+        if self.valid_set is not None: 
+            idx = np.random.randint(0, self.valid_set.shape[0], batch_size)
+            test_val = self.discriminator.predict(self.valid_set[idx])
+        else:
+            test_val = np.zeros(batch_size)
+        
+        noise = np.random.normal(self.data_set_mean, self.data_set_std, (batch_size,)+ self.input_shape)
+        cont_val = self.discriminator.predict(noise)
+        
+        metric = self.metric_test(self.train_set, batch_size)    
+        
+        return gen_val, train_val, test_val, cont_val, metric
     
     def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
         """Trains the model for a given number of epochs (iterations on a dataset).
@@ -193,21 +214,7 @@ class GAN(object):
             A history object. 
         """ 
     
-        if 0. < validation_split < 1.:
-            split_at = int(data_set.shape[0] * (1. - validation_split))
-            train_set = data_set[:split_at]
-            valid_set = data_set[split_at:]
-        else:
-            train_set = data_set
-            valid_set = None
-    
-        #collect statistical info of data
-        data_set_std = np.std(data_set,axis = 0)
-        data_set_mean = np.mean(data_set,axis = 0)
-    
-        # Adversarial ground truths
-        self.valid = np.ones((batch_size, 1))
-        self.fake = np.zeros((batch_size, 1))
+        self.prepare_data(data_set, validation_split, batch_size)
 
         #mean min max
         max_hist_size = epochs//checkpoint_range + 1
@@ -222,28 +229,11 @@ class GAN(object):
         for epoch in range(epochs):
             self.epoch = epoch
             
-            d_loss, g_loss = self.train_on_batch(train_set, batch_size)
+            d_loss, g_loss = self.train_on_batch(batch_size)
 
             # Plot the progress
             if epoch % checkpoint_range == 0:
-                noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-                gen_imgs = self.generator.predict([noise])
-                gen_val = self.discriminator.predict([gen_imgs])
-                
-                idx = np.random.randint(0, train_set.shape[0], batch_size)
-                imgs = train_set[idx]
-                train_val = self.discriminator.predict([imgs])
-                
-                if valid_set is not None: 
-                    idx = np.random.randint(0, valid_set.shape[0], batch_size)
-                    test_val = self.discriminator.predict(valid_set[idx])
-                else:
-                    test_val = np.zeros(batch_size)
-                
-                noise = np.random.normal(data_set_mean, data_set_std, (batch_size,)+ self.input_shape)
-                cont_val = self.discriminator.predict(noise)
-                
-                metric = self.metric_test(train_set, 128)
+                gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
                 
                 if verbose:
                     print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))

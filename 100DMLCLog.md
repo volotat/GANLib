@@ -228,3 +228,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/89c4da2762eea202fab70f3ab579bec5d90ed660)
 
+
+## Day 34 : August 9, 2018
+ 
+**Today's progress** :  GAN, CramerGAN, CGAN are now rewrited. From now Progressive GAN would be just a special case of improved Wasserstein GAN, that not implemented yet.
+
+**Link to work:**  [Commit]()
