@@ -233,4 +233,4 @@
  
 **Today's progress** :  GAN, CramerGAN, CGAN are now rewrited. From now Progressive GAN would be just a special case of improved Wasserstein GAN, that not implemented yet.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/f8fd97fa27948ed894c4eb3dbd2d210704184da2)
