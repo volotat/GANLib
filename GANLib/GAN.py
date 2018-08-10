@@ -186,7 +186,7 @@ class GAN(object):
         
         return gen_val, train_val, test_val, cont_val, metric
     
-    def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False):
+    def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, collect_history = True):
         """Trains the model for a given number of epochs (iterations on a dataset).
         # Arguments
             data_set: 
@@ -210,6 +210,8 @@ class GAN(object):
                 The validation data is selected from the last samples.
             save_best_model:
                 Boolean. If True, generator weights will be resigned to best model according to chosen metric.
+            collect_history:
+                Boolean. If True, all training history will store into 'history' object. Sometimes it might be computationally expensive.
         # Returns
             A history object. 
         """ 
@@ -231,26 +233,30 @@ class GAN(object):
             
             d_loss, g_loss = self.train_on_batch(batch_size)
 
-            # Plot the progress
+            # Save history
             if epoch % checkpoint_range == 0:
-                gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
-                
-                if verbose:
-                    print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                
-                hist_size = history['hist_size'] = history['hist_size']+1
-                history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
-                history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
-                
-                if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                    self.best_model = self.generator.get_weights()
-                    self.best_metric = np.mean(metric)
-                    history['best_metric'] = self.best_metric
+                if not collect_history:
+                    if verbose:
+                        print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
+                else:
+                    gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
                     
-                self.history = history
+                    if verbose:
+                        print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                    
+                    hist_size = history['hist_size'] = history['hist_size']+1
+                    history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
+                    history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
+                    history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                    history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
+                    history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                    
+                    if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                        self.best_model = self.generator.get_weights()
+                        self.best_metric = np.mean(metric)
+                        history['best_metric'] = self.best_metric
+                        
+                    self.history = history
                 
                 if checkpoint_callback is not None:
                     checkpoint_callback()
