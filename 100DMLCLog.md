@@ -240,4 +240,4 @@
  
 **Today's progress** :  Added example of simplest possible GAN to the library.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/02c72d33f8b47e9f55d965f4ab5119bd22ac6a07)
