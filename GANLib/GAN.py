@@ -3,7 +3,7 @@ from keras.models import Model, load_model
 from keras.optimizers import Adam
 import os
 import numpy as np
-
+import warnings
 
 from . import metrics
 from . import utils
@@ -72,6 +72,8 @@ class GAN(object):
         self.combined = Model([noise], valid)
         self.combined.compile(loss=self.loss, optimizer=self.optimizer)
         
+        self.discriminator.trainable = True
+        
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
             split_at = int(data_set.shape[0] * (1. - validation_split))
@@ -86,8 +88,11 @@ class GAN(object):
         self.data_set_mean = np.mean(data_set,axis = 0)
     
         # Adversarial ground truths
-        self.valid = np.ones((batch_size, 1))
-        self.fake = np.zeros((batch_size, 1))
+        out_shape = self.discriminator.output_shape
+        self.valid = np.ones((batch_size,) + out_shape[1:])
+        self.fake = np.zeros((batch_size,) + out_shape[1:])
+        #self.valid = np.ones((batch_size, 1))
+        #self.fake = np.zeros((batch_size, 1))
         
     def train_on_batch(self, batch_size):
         # Select a random batch of images
@@ -118,50 +123,37 @@ class GAN(object):
         return d_loss, g_loss
         
         
-    def build_models(self, optimizer = None, path = ''):
-    
-        '''    
-        if self.mode == 'stable':
-            loss = 'logcosh'
-            self.disc_activation = 'linear'
-        elif self.mode == 'vanilla':
-            loss = 'binary_crossentropy'
-            self.disc_activation = 'sigmoid'
-        else: raise Exception("Mode '" + self.mode+ "' is unknown")
-        
-        
-        self.path = path
-        if os.path.isfile(path+'/generator.h5') and os.path.isfile(path+'/discriminator.h5'):
-            self.generator = load_model(path+'/generator.h5')
-            self.discriminator = load_model(path+'/discriminator.h5')
-        else:
-            if self.build_discriminator is None or self.build_generator is None:
-                raise Exception("Model building functions are not defined")
-            else:
-                # Build and compile the discriminator
-                self.discriminator = self.build_discriminator()
-                self.discriminator.compile(loss=loss, optimizer=optimizer)
-
-                # Build the generator
-                self.generator = self.build_generator()
-        '''
-        
+    def build_models(self, optimizer = None, files = None, custom_objects = None):
         self.set_models_params(optimizer)
         
-        # Build models
-        if self.build_discriminator is None or self.build_generator is None:
-            raise Exception("Model building functions are not defined")
-        else:
-            self.discriminator = self.build_discriminator()
-            self.generator = self.build_generator()
-        
+        loaded = False
+        if files is not None:
+            # Try to load models
+            try:
+                self.generator = load_model(files[0], custom_objects=custom_objects)
+                self.discriminator = load_model(files[1], custom_objects=custom_objects)
+                loaded = True
+                print('models loaded')  
+            except IOError as e:
+                warnings.warn("Files cannot be opened. Models will be rebuilded instead!")
+                
+        if not loaded:
+            # Build models
+            if self.build_discriminator is None or self.build_generator is None:
+                raise Exception("Model building functions are not defined")
+            else:   
+                self.generator = self.build_generator()
+                self.discriminator = self.build_discriminator()
+            
+            print('models builded')  
+            
         self.build_graph()
         
-        print('models builded')    
+          
             
-    def save(self):
-        self.generator.save(self.path+'/generator.h5')
-        self.discriminator.save(self.path+'/discriminator.h5')
+    def save(self, files):
+        self.generator.save(files[0])
+        self.discriminator.save(files[1])
         
         
     def test_network(self, batch_size):

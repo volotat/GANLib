@@ -85,7 +85,6 @@ class CGAN(GAN):
         self.label_set_mean = np.mean(data_set[1],axis = 0)
     
         # Adversarial ground truths
-        
         out_shape = self.discriminator.output_shape
         self.valid = np.ones((batch_size,) + out_shape[1:])
         self.fake = np.zeros((batch_size,) + out_shape[1:])
