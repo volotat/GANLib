@@ -244,8 +244,8 @@
 
 
 
-## Day 35 : August 10, 2018
+## Day 36 : August 11, 2018
  
 **Today's progress** :  Changed the way of saving and loading models.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/9b6a59eac6eab20eb50b2cb5473ce5b990419d3c)
