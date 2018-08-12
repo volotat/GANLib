@@ -31,7 +31,7 @@ class AAE(GAN):
         
     def set_models_params(self, optimizer):
         if optimizer is None:   
-            self.optimizer = Adam(0.0002, 0.5)
+            self.optimizer = Adam(0.0002, 0.5, clipnorm = 10.)
         else:
             self.optimizer = optimizer
             
@@ -48,6 +48,7 @@ class AAE(GAN):
         real_img = Input(shape=self.input_shape)
         real_lat = Input(shape=(self.latent_dim,))
         genr_lat = E(real_img)
+        real_val = DSC(real_lat) 
         genr_val = DSC(genr_lat)
         
         self.decoded_encoded = Model(real_img, D(E(real_img)))
@@ -56,7 +57,7 @@ class AAE(GAN):
         self.discriminator.trainable = True
         self.encoder.trainable = False
         
-        DSC_tns = Lambda(lambda x: -tf.reduce_mean(tf.log(x[0] + TINY) + tf.log(1.0 - x[1] + TINY)) )([real_lat, genr_lat])
+        DSC_tns = Lambda(lambda x: -tf.reduce_mean(tf.log(x[0] + TINY) + tf.log(1.0 - x[1] + TINY)) )([real_val, genr_val])
         self.disc_model = Model([real_lat, real_img], DSC_tns)
         self.disc_model.compile(loss=utils.ident_loss, optimizer=self.optimizer)
         
@@ -82,7 +83,6 @@ class AAE(GAN):
         #This values will be used in a way that do no affect the network
         self.dummy = np.zeros((batch_size, 1))
         
-        TINY = 1e-8
         #everywhere clipped by norm 10
         
         #reconst_trainer
