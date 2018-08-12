@@ -254,4 +254,4 @@
  
 **Today's progress** :  Rebuilding Adversarial Autoencoder and trying to make it work properly.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b9321eb56feca7bc2721cf3f68a59afdfa531ec0)
