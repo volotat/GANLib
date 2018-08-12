@@ -1,7 +1,6 @@
-from keras.layers import Input
+from keras.layers import Input, Lambda
 from keras.models import Model, load_model
 from keras.optimizers import Adam
-from keras.layers import Lambda, Reshape, Activation
 import os
 import numpy as np
 

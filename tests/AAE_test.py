@@ -27,7 +27,8 @@ def build_encoder(self):
     layer = Dense(128)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    #latent = Dense(self.latent_dim, activation = 'linear')(layer)
+    latent = Dense(self.latent_dim, activation = 'linear')(layer)
+    '''
     mu = Dense(self.latent_dim)(layer)
     log = Dense(self.latent_dim)(layer)
         
@@ -35,6 +36,7 @@ def build_encoder(self):
                 output_shape=lambda p: p[0])
         
     latent = lat_layer([mu, log])
+    '''
     return Model(input_img, latent)
     
 def build_decoder(self):
@@ -72,8 +74,8 @@ def build_discriminator(self):
 def sample_images(gen, file):
     r, c = 5, 5
     
-    noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-    #noise = np.random.normal(size=(r * c, noise_dim))
+    #noise = np.random.uniform(-1, 1, (r * c, noise_dim))
+    noise = np.random.normal(size=(r * c, noise_dim))
     gen_imgs = gen.predict(noise)
 
     # Rescale images 0 - 1
@@ -113,6 +115,6 @@ gan.build_models()
 def callback():
     path = 'images/'+img_path+'/'
     sample_images(gan.decoder, path+'decoded.png')
-    plotter.save_hist_image(gan.history, path+'History.png')
+    #plotter.save_hist_image(gan.history, path+'History.png')
     
-gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs=200000, batch_size=64, checkpoint_callback = callback, validation_split = 0, collect_history = False)    

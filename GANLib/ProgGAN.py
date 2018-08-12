@@ -24,6 +24,9 @@ from . import utils
 #   Pixelwise normalization, minibatch stddev and other "tricks" from paper realized 
 #   outside of the class in utils module. The reason is they are more related to internal 
 #   model structure than overall algorithm and GANLib allows specified whatever model you want.
+
+#       To do:
+#   Rewrite as special case of Improved Wasserstain GAN
  
  
 class RandomWeightedAverage(_Merge):

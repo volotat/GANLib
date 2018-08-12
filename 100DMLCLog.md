@@ -243,9 +243,15 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/02c72d33f8b47e9f55d965f4ab5119bd22ac6a07)
 
 
-
 ## Day 36 : August 11, 2018
  
 **Today's progress** :  Changed the way of saving and loading models.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/9b6a59eac6eab20eb50b2cb5473ce5b990419d3c)
+
+
+## Day 37 : August 12, 2018
+ 
+**Today's progress** :  Rebuilding Adversarial Autoencoder and trying to make it work properly.
+
+**Link to work:**  [Commit]()

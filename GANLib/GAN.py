@@ -175,7 +175,6 @@ class GAN(object):
         cont_val = self.discriminator.predict(noise)
         
         metric = self.metric_test(self.train_set, batch_size)    
-        
         return gen_val, train_val, test_val, cont_val, metric
     
     def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, collect_history = True):
