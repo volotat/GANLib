@@ -19,10 +19,11 @@ Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/maste
 
 
 #### Current progress for each module:
-GAN: completed  
+AAE: completed  
 CGAN: completed  
-ProgGAN: completed  
-CramerGAN: completed    
+CramerGAN: completed 
+GAN: completed  
+ProgGAN: completed 
 DiscoGAN: works as supposed to, but do not store all necessary history  
-AAE: in progress  
+
 
