@@ -255,3 +255,12 @@
 **Today's progress** :  Rebuilding Adversarial Autoencoder and trying to make it work properly.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b9321eb56feca7bc2721cf3f68a59afdfa531ec0)
+
+
+## Day 38 : August 13, 2018
+ 
+**Today's progress** :  Complete Adversarial Autoencoder. Realize that there is necessity to change a way of history processing.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/8691f04f3cf9d0964aa22c9a1475b9b11cc40247)
+
+
