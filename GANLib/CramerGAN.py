@@ -106,10 +106,13 @@ class CramerGAN(GAN):
             
         return imgs, noise_a, noise_b    
         
-    def train_on_batch(self, batch_size):
-        # target values do not affect the network, so it does not matter what they are ¯\_(ツ)_/¯ 
+    def prepare_data(self, data_set, validation_split, batch_size):
+        super(CramerGAN, self).prepare_data(data_set, validation_split, batch_size)
+        
+        #This values will be used in a way that do no affect the network
         self.dummy = np.zeros((batch_size, 1))
         
+    def train_on_batch(self, batch_size):
         # ---------------------
         #  Train Discriminator
         # ---------------------

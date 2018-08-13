@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-noise_dim = 10
+noise_dim = 2
 
 def build_encoder(self):
     input_img = Input(shape=self.input_shape)
@@ -27,16 +27,8 @@ def build_encoder(self):
     layer = Dense(128)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    latent = Dense(self.latent_dim, activation = 'linear')(layer)
-    '''
-    mu = Dense(self.latent_dim)(layer)
-    log = Dense(self.latent_dim)(layer)
-        
-    lat_layer = Lambda(lambda p: p[0] + K.random_normal(K.shape(p[0])) * K.exp(p[1] / 2),
-                output_shape=lambda p: p[0])
-        
-    latent = lat_layer([mu, log])
-    '''
+    latent = Dense(self.latent_dim)(layer)
+    
     return Model(input_img, latent)
     
 def build_decoder(self):
@@ -49,7 +41,7 @@ def build_decoder(self):
     layer = Dense(256)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    layer = Dense(784, activation = 'tanh')(layer)
+    layer = Dense(784)(layer)
     output_img = Reshape((28,28,1))(layer)
     
     return Model(input_img, output_img)    
@@ -64,18 +56,17 @@ def build_discriminator(self):
     layer = Dense(64)(layer)
     layer = LeakyReLU(alpha=0.2)(layer)
     
-    validity = Dense(1, activation = 'sigmoid')(layer)
+    validity = Dense(1, activation = self.disc_activation)(layer)
     
     return Model(input_lat, validity)    
      
         
 
+r, c = 5, 5
+noise = np.random.uniform(-1, 1, (r * c, noise_dim))
+#noise = np.random.normal(size=(r * c, noise_dim))
 
 def sample_images(gen, file):
-    r, c = 5, 5
-    
-    #noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-    noise = np.random.normal(size=(r * c, noise_dim))
     gen_imgs = gen.predict(noise)
 
     # Rescale images 0 - 1
@@ -115,6 +106,6 @@ gan.build_models()
 def callback():
     path = 'images/'+img_path+'/'
     sample_images(gan.decoder, path+'decoded.png')
-    #plotter.save_hist_image(gan.history, path+'History.png')
+    plotter.save_hist_image(gan.history, path+'History.png')
     
-gan.train(X_train, epochs=200000, batch_size=64, checkpoint_callback = callback, validation_split = 0, collect_history = False)    
+gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    

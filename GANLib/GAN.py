@@ -16,6 +16,8 @@ from . import utils
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
 
+#       To do:
+#   Rewrite history collector in a way that each module might use its own collection of values to store
 
 class GAN(object):
     def metric_test(self, set, pred_num = 32):    
@@ -243,7 +245,7 @@ class GAN(object):
                     history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
                     
                     if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                        self.best_model = self.generator.get_weights()
+                        #self.best_model = self.generator.get_weights()
                         self.best_metric = np.mean(metric)
                         history['best_metric'] = self.best_metric
                         
