@@ -19,8 +19,7 @@ from .GAN import GAN
 #   useful latent representation of data. 
 
 #       To do:
-#   Find a way how to split sets into train and test ones
-#   Deal with history
+#   Do not store control value
 
 class AAE(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
