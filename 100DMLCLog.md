@@ -269,5 +269,5 @@
  
 **Today's progress** :  Start building Improved version of Wasserstein GAN.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b59dbc8b6254fd2a436e0511c07a5da3afcab0e5)
 
