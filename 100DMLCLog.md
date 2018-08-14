@@ -264,3 +264,10 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/8691f04f3cf9d0964aa22c9a1475b9b11cc40247)
 
 
+
+## Day 39 : August 14, 2018
+ 
+**Today's progress** :  Start building Improved version of Wasserstein GAN.
+
+**Link to work:**  [Commit]()
+
