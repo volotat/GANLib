@@ -11,5 +11,6 @@ from .CramerGAN import CramerGAN
 from .DiscoGAN import DiscoGAN
 from .GAN import GAN
 from .ProgGAN import ProgGAN
+from .WGAN_GP import WGAN_GP
 
 __version__ = '0.0.4'

@@ -64,7 +64,7 @@ data_shape = data.shape[1:]
 noise_dim = 100
 
 
-# Build GAN and train it on your data
+# Build GAN and train it on data
 gan = GAN(data_shape, noise_dim) #define type of Generative model
 gan.build_generator = lambda self=gan: build_generator(self) #define generator build function
 gan.build_discriminator = lambda self=gan: build_discriminator(self) #define discriminator build function

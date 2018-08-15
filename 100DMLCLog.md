@@ -271,3 +271,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b59dbc8b6254fd2a436e0511c07a5da3afcab0e5)
 
+
+## Day 40 : August 15, 2018
+ 
+**Today's progress** :  Created graph for Improved Wasserstein GAN. Module was renamed to WGAP_GP because gradient penalty is most important part of this algorithm.
+
+**Link to work:**  [Commit]()
+

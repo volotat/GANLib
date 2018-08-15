@@ -1,4 +1,4 @@
-from GANLib import CramerGAN
+from GANLib import WGAN_GP
 from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
@@ -12,7 +12,7 @@ from keras.optimizers import Adam, RMSprop, Nadam
 import matplotlib.pyplot as plt
 import numpy as np
 
-#Do not use BatchNormalization with CramerGAN! It will conflict with the gradient penalty.
+#Do not use BatchNormalization! It will conflict with the gradient penalty.
 
 class conv_model_28(): 
     def build_generator(self):
@@ -140,13 +140,13 @@ for i in range(len(tests['dataset'])):
         X_train = np.expand_dims(X_train, axis=3)
 
     #Run GAN for 20000 iterations
-    gan = ImpWGAN(X_train.shape[1:], noise_dim)
+    gan = WGAN_GP(X_train.shape[1:], noise_dim)
     gan.build_generator = lambda self=gan: model.build_generator(self)
     gan.build_discriminator = lambda self=gan: model.build_discriminator(self)
     gan.build_models()
 
     def callback():
-        path = 'images/ImpWGAN/'+tests['img_path'][i]+'/conv_'
+        path = 'images/WGAN_GP/'+tests['img_path'][i]+'/conv_'
         sample_images(gan.generator, path+'.png')
         plotter.save_hist_image(gan.history, path+'_hist.png')
         
