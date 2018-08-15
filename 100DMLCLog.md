@@ -276,5 +276,5 @@
  
 **Today's progress** :  Created graph for Improved Wasserstein GAN. Module was renamed to WGAP_GP because gradient penalty is most important part of this algorithm.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a86eb2bea917b2c43a22002005fb069585438258)
 
