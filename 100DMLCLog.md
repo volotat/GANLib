@@ -283,5 +283,5 @@
  
 **Today's progress** :  Got first good results with WGAP GP. Now it's possible to rewrite Progressive Growing of GANs in a proper way. 
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5adc595bb01fee18789219b0c540f02cef14a5ac)
 
