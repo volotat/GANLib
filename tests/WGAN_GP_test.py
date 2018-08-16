@@ -126,7 +126,6 @@ def sample_images(gen, file):
     fig.savefig(file) #% epoch
     plt.close()
 
-    
 for i in range(len(tests['dataset'])): 
     model = tests['model'][i]  
 

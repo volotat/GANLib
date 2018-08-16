@@ -276,5 +276,12 @@
  
 **Today's progress** :  Created graph for Improved Wasserstein GAN. Module was renamed to WGAP_GP because gradient penalty is most important part of this algorithm.
 
-**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a86eb2bea917b2c43a22002005fb069585438258)
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a86eb2bea917b2c43a22002005fb069585438258)'
+
+
+## Day 41 : August 16, 2018
+ 
+**Today's progress** :  Got first good results with WGAP GP. Now it's possible to rewrite Progressive Growing of GANs in a proper way. 
+
+**Link to work:**  [Commit]()
 

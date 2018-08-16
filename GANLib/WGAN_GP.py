@@ -14,7 +14,8 @@ from .GAN import GAN
 #   Paper: https://arxiv.org/pdf/1704.00028.pdf 
 
 #       Description:
-
+#   More stable approach to Wasserstein GAN training that get rid of 
+#   weights clipping that necessary for usual Wasserstein GAN
 
 class WGAN_GP(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
@@ -74,9 +75,9 @@ class WGAN_GP(GAN):
         # Graph for the Discriminator
         #-------------------------------
         
+        self.discriminator.trainable = True
+        self.generator.trainable = False 
         
-            
-        # D(genr) - D(real) +f_ddx(D(xhat), xhat)
         L_D_tns = Lambda(lambda x: K.mean(x[0] - x[1] + f_ddx(x[2], x[3])))([D(genr_img), D(real_img), genr_img, real_img])
         
         self.disc_model = Model([real_img, noise], L_D_tns)
