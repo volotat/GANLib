@@ -24,6 +24,6 @@ CGAN: completed
 CramerGAN: completed  
 GAN: completed  
 DiscoGAN: works as supposed to, but do not store all necessary history  
-WGAP GP: in progress
+WGAP GP: in progress  
 ProgGAN: in progress 
 
