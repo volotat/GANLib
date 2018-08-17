@@ -1,4 +1,4 @@
-from GANLib import ProgGAN, plotter, utils
+from GANLib import WGAN_GP, plotter, utils
 
 import keras 
 from keras.datasets import mnist, fashion_mnist, cifar10
@@ -210,9 +210,6 @@ def sample_images(gen, file):
     plt.close()   
     
     
-img_path = 'ProgGAN'
-mode = 'vanilla'
-    
 # Load the dataset
 (X_train, labels), (_, _) = cifar10.load_data()
 indx = np.where(labels == 8)[0]
@@ -223,9 +220,11 @@ X_train = (X_train.astype(np.float32) - 127.5) / 127.5
 if len(X_train.shape)<4:
     X_train = np.expand_dims(X_train, axis=3)
     
+#here has to be a step with data augmentation    
+    
     
 #Build and train GAN
-gan = ProgGAN(X_train.shape[1:], noise_dim, mode = mode)
+gan = WGAN_GP(X_train.shape[1:], noise_dim)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
 
@@ -233,8 +232,7 @@ gan.build_models()
 
 
 def callback():
-    path = 'images/'+img_path+'/'
-    sample_images(gan.generator, path+'results.png')
-    plotter.save_hist_image(gan.history, path+'history.png')
+    sample_images(gan.generator, 'pg_gan_results.png')
+    plotter.save_hist_image(gan.history, 'pg_gan_history.png')
     
-gan.train(X_train, epochs_list = [4000, 8000, 16000, 32000], batch_size_list=[16, 16, 16, 16], checkpoint_callback = callback, validation_split = 0.1)    
+gan.train(X_train, epochs = [4000, 8000, 16000, 32000], batch_size = [16, 16, 16, 16], checkpoint_callback = callback, validation_split = 0.1)    
