@@ -10,7 +10,7 @@ Keras 2.2.0
 Numpy 1.14.2  
 Matplotlib 2.1.1  
 
-### Installing:
+### Installing
 WARNING! Keep in mind this is a very early stage of the project. Many things might not work as expected! (That said, feel free to open issue, ask a question or make any suggestions.)
 ```sh
 git clone --recursive https://github.com/Mylittlerapture/GANLib GANLib
@@ -19,11 +19,11 @@ pip3 install -e .
 ```
 
 
-### Examples:
+### Examples
 Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/simple_gan.py)
 
 
-### Current progress for each module:
+### Current progress for each module
 AAE: completed  
 CGAN: completed  
 CramerGAN: completed  
