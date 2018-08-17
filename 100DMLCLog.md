@@ -289,5 +289,5 @@
  
 **Today's progress** :  Started reimplementing Progressive Growing of GANs as example of WGAN GP use case. 
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/48e4c4bec7f3f870d53636eb3f921b996f7b616b)
 
