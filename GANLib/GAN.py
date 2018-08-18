@@ -76,7 +76,15 @@ class GAN(object):
         
         self.discriminator.trainable = True
         
+        
+    def correct_data(self):
+        pass
+        
     def prepare_data(self, data_set, validation_split, batch_size):
+        self.data_set = data_set
+        self.correct_data()
+        data_set = self.data_set
+    
         if 0. < validation_split < 1.:
             split_at = int(data_set.shape[0] * (1. - validation_split))
             self.train_set = data_set[:split_at]
@@ -95,6 +103,7 @@ class GAN(object):
         self.fake = np.zeros((batch_size,) + out_shape[1:])
         #self.valid = np.ones((batch_size, 1))
         #self.fake = np.zeros((batch_size, 1))
+        
         
     def train_on_batch(self, batch_size):
         # Select a random batch of images
@@ -178,6 +187,10 @@ class GAN(object):
         
         metric = self.metric_test(self.train_set, batch_size)    
         return gen_val, train_val, test_val, cont_val, metric
+        
+        
+    def rebuild_function(self):
+        self.build_models()
     
     def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, collect_history = True):
         """Trains the model for a given number of epochs (iterations on a dataset).
@@ -208,11 +221,16 @@ class GAN(object):
         # Returns
             A history object. 
         """ 
+        
+        if not isinstance(epochs, list): epochs_list = [epochs] 
+        else: epochs_list = epochs
+        
+        if not isinstance(batch_size, list): batch_size_list = [batch_size] 
+        else: batch_size_list = batch_size
     
-        self.prepare_data(data_set, validation_split, batch_size)
-
         #mean min max
-        max_hist_size = epochs//checkpoint_range + 1
+        tot_num_of_epochs = np.sum(np.array(epochs_list))
+        max_hist_size = tot_num_of_epochs//checkpoint_range + 1
         history = { 'gen_val'    :np.zeros((max_hist_size,3)), 
                     'train_val'  :np.zeros((max_hist_size,3)), 
                     'test_val'   :np.zeros((max_hist_size,3)), 
@@ -221,38 +239,48 @@ class GAN(object):
                     'best_metric':0,
                     'hist_size'  :0}
         
-        for epoch in range(epochs):
-            self.epoch = epoch
+        for i in range(len(epochs_list)):
+            epochs = epochs_list[i]
+            batch_size = batch_size_list[i]
             
-            d_loss, g_loss = self.train_on_batch(batch_size)
-
-            # Save history
-            if epoch % checkpoint_range == 0:
-                if not collect_history:
-                    if verbose:
-                        print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
-                else:
-                    gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
-                    
-                    if verbose:
-                        print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                    
-                    hist_size = history['hist_size'] = history['hist_size']+1
-                    history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
-                    history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                    history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                    history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                    history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
-                    
-                    if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
-                        #self.best_model = self.generator.get_weights()
-                        self.best_metric = np.mean(metric)
-                        history['best_metric'] = self.best_metric
-                        
-                    self.history = history
+            # ---------------------
+            # Rebuild Network
+            # ---------------------
+            self.rebuild_function()
+            self.prepare_data(data_set, validation_split, batch_size)
+            
+            for epoch in range(epochs):
+                self.epoch = epoch
                 
-                if checkpoint_callback is not None:
-                    checkpoint_callback()
+                d_loss, g_loss = self.train_on_batch(batch_size)
+
+                # Save history
+                if epoch % checkpoint_range == 0:
+                    if not collect_history:
+                        if verbose:
+                            print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
+                    else:
+                        gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
+                        
+                        if verbose:
+                            print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
+                        
+                        hist_size = history['hist_size'] = history['hist_size']+1
+                        history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
+                        history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
+                        history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
+                        history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
+                        history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                        
+                        if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                            #self.best_model = self.generator.get_weights()
+                            self.best_metric = np.mean(metric)
+                            history['best_metric'] = self.best_metric
+                            
+                        self.history = history
+                    
+                    if checkpoint_callback is not None:
+                        checkpoint_callback()
         
         
         

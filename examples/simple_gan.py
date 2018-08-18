@@ -68,7 +68,6 @@ noise_dim = 100
 gan = GAN(data_shape, noise_dim) #define type of Generative model
 gan.build_generator = lambda self=gan: build_generator(self) #define generator build function
 gan.build_discriminator = lambda self=gan: build_discriminator(self) #define discriminator build function
-gan.build_models() #build all necessary models
 
 def callback():
     sample_images(gan.generator, 'simple_gan.png')

@@ -14,6 +14,8 @@ import numpy as np
 
 import keras.backend as K
 
+from skimage.measure import block_reduce
+
 
 
 #-------------------------------
@@ -106,9 +108,17 @@ filters = 64
 noise_dim = 64 
 weights_scale_func = spectral_norm #dynamic_he_scale, lambda x: x
 
+
+layers = 0
+weights = {}
+
+channels = 3
+transition_alpha = utils.tensor_value(0)
+
+
 def new_sheet(self, filters, kernel_size, padding, name):
     def func(layer):
-        w = self.weights.get(name,None)
+        w = weights.get(name,None)
         layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, kernel_initializer = initialization)(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
         layer = utils.PixelNorm()(layer)
@@ -127,18 +137,18 @@ def build_generator(self):
     layer = new_sheet(self, filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
-    for i in range(self.layers):
+    for i in range(layers):
         layer = UpSampling2D(2)(layer)
-        if i == self.layers-1: previous_step = layer
+        if i == layers-1: previous_step = layer
             
         layer = new_sheet(self, filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
-    next_step = Conv2D_sw(self.channels, (1,1), weights = self.weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
+    next_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
     
     #smooth fading
     if previous_step is not None: 
-        previous_step = Conv2D_sw(self.channels, (1,1), weights = self.weights.get('to_rgb',None))(previous_step) 
-        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
+        previous_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None))(previous_step) 
+        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha.tensor)([previous_step, next_step])
     else:
         layer = next_step
       
@@ -148,27 +158,27 @@ def build_discriminator(self):
     previous_step = None
     next_step = None
     
-    input_layer = Input(shape=self.inp_shape)
+    input_layer = Input(shape=self.input_shape)
     
-    layer = Conv2D_sw(filters, (1,1), weights = self.weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = initialization)(input_layer) #from RGB
+    layer = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = initialization)(input_layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     layer = utils.PixelNorm()(layer)
     
     #Growing layers
-    for i in range(self.layers, 0, -1):
+    for i in range(layers, 0, -1):
         layer = new_sheet(self, filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
 
         #smooth fading
-        if i == self.layers:
+        if i == layers:
             next_step = layer
             
             previous_step = AveragePooling2D(2)(input_layer)
-            previous_step = Conv2D_sw(filters, (1,1), weights = self.weights.get('from_rgb',None))(previous_step) #from RGB
+            previous_step = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None))(previous_step) #from RGB
             previous_step = LeakyReLU(alpha=0.2)(previous_step) 
             previous_step = utils.PixelNorm()(previous_step)
         
-            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * self.transition_alpha.tensor)([previous_step, next_step])
+            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha.tensor)([previous_step, next_step])
                 
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
@@ -209,6 +219,27 @@ def sample_images(gen, file):
     fig.savefig(file)
     plt.close()   
     
+def rebuild(self):
+    global layers, inp_shape
+    if layers !=0:
+        transition_alpha.set(0)
+                    
+        #copy old weights to new expanded network
+        for l in self.generator.layers:
+            weights[l.name] = l.get_weights() 
+            
+        for l in self.discriminator.layers:
+            weights[l.name] = l.get_weights() 
+    
+    
+    sz = 2 ** (layers + 2)
+    self.input_shape = (sz,sz,channels)
+    self.build_models()
+    
+    
+    layers += 1
+
+
     
 # Load the dataset
 (X_train, labels), (_, _) = cifar10.load_data()
@@ -222,14 +253,18 @@ if len(X_train.shape)<4:
     
 #here has to be a step with data augmentation    
     
+def correct_data(self):
+    sz = X_train.shape[1] // self.input_shape[0]
+    self.data_set = block_reduce(self.data_set, block_size=(1, sz, sz, 1), func=np.mean) 
+
     
 #Build and train GAN
-gan = WGAN_GP(X_train.shape[1:], noise_dim)
+gan = WGAN_GP((4,4, channels), noise_dim)
 gan.build_generator = lambda self=gan: build_generator(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
-
-gan.build_models() 
-
+gan.rebuild_function = lambda self=gan: rebuild(self)
+gan.correct_data = lambda self=gan: correct_data(self)
+#gan.build_models() 
 
 def callback():
     sample_images(gan.generator, 'pg_gan_results.png')

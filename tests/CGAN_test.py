@@ -207,7 +207,7 @@ for i in range(len(tests['dataset'])):
     gan = CGAN([X_train.shape[1:], (10,)], noise_dim)
     gan.build_generator = lambda self=gan: model.build_generator(self)
     gan.build_discriminator = lambda self=gan: model.build_discriminator(self)
-    gan.build_models()
+    #gan.build_models()
 
     def callback():
         path = 'images/CGAN/'+tests['img_path'][i]+'/conv_'

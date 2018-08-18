@@ -291,3 +291,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/48e4c4bec7f3f870d53636eb3f921b996f7b616b)
 
+
+## Day 43 : August 18, 2018
+ 
+**Today's progress** :  Continue reimplementing Progressive Growing of GANs in a better way. A bit messy right now, but will fix it later.
+
+**Link to work:**  [Commit]()
+

@@ -101,7 +101,7 @@ gan = AAE(X_train.shape[1:], noise_dim)
 gan.build_encoder = lambda self=gan: build_encoder(self)
 gan.build_decoder = lambda self=gan: build_decoder(self)
 gan.build_discriminator = lambda self=gan: build_discriminator(self)
-gan.build_models()
+#gan.build_models()
 
 def callback():
     path = 'images/'+img_path+'/'
