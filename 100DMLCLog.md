@@ -296,5 +296,5 @@
  
 **Today's progress** :  Continue reimplementing Progressive Growing of GANs in a better way. A bit messy right now, but will fix it later.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/3aa15f97740e725115b76509c58f613ac0bdee3c)
 
