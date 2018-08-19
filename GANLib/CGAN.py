@@ -33,11 +33,8 @@ class CGAN(GAN):
         super(CGAN, self).__init__(input_shapes[0], latent_dim , **kwargs)
         self.label_shape = input_shapes[1]
         
-    def set_models_params(self, optimizer):
-        if optimizer is None:   
-            self.optimizer = Adam(0.0002, 0.5, 0.9)
-        else:
-            self.optimizer = optimizer
+    def set_models_params(self):
+        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, 0.9)
             
         self.loss = 'binary_crossentropy'
         self.disc_activation = 'sigmoid'

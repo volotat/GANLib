@@ -25,11 +25,8 @@ class AAE(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
         super(AAE, self).__init__(input_shape, latent_dim , **kwargs)
         
-    def set_models_params(self, optimizer):
-        if optimizer is None:   
-            self.optimizer = Adam(0.0002, 0.5, clipnorm = 10)
-        else:
-            self.optimizer = optimizer
+    def set_models_params(self):
+        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, clipnorm = 10)
             
         self.loss = 'mse'
         self.disc_activation = 'sigmoid'    
@@ -95,8 +92,8 @@ class AAE(GAN):
         
         return d_loss, g_loss
         
-    def build_models(self, optimizer = None, files = None, custom_objects = None):
-        self.set_models_params(optimizer)
+    def build_models(self, files = None, custom_objects = None):
+        self.set_models_params()
         
         loaded = False
         if files is not None:

@@ -298,3 +298,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/3aa15f97740e725115b76509c58f613ac0bdee3c)
 
+
+
+## Day 44 : August 19, 2018
+ 
+**Today's progress** :  Still rebuilding PG GAN while also improving overall structure of the library.
+
+**Link to work:**  [Commit]()

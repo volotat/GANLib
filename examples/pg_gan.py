@@ -18,6 +18,15 @@ from skimage.measure import block_reduce
 
 
 
+#                   Progressively growing of GANs
+#   Paper: https://arxiv.org/pdf/1710.10196.pdf
+
+#       Description:
+#   Takes as input some dataset and trains the network as usual GAN but progressively 
+#   adding layers to generator and discriminator.
+
+
+
 #-------------------------------
 # Auxiliary functions
 #-------------------------------  
@@ -113,10 +122,9 @@ layers = 0
 weights = {}
 
 channels = 3
-transition_alpha = utils.tensor_value(0)
 
 
-def new_sheet(self, filters, kernel_size, padding, name):
+def new_sheet(filters, kernel_size, padding, name):
     def func(layer):
         w = weights.get(name,None)
         layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, kernel_initializer = initialization)(layer)
@@ -124,6 +132,9 @@ def new_sheet(self, filters, kernel_size, padding, name):
         layer = utils.PixelNorm()(layer)
         return layer
     return func
+    
+def transition_alpha(self):
+    return K.minimum(self.epoch.tensor / (self.epochs.tensor/2), 1) 
    
 def build_generator(self):
     previous_step = None
@@ -133,22 +144,22 @@ def build_generator(self):
     layer = RepeatVector(16)(input_layer)
     layer = Reshape((4, 4, self.latent_dim))(layer)
     
-    layer = new_sheet(self, filters, (4,4), 'same', 'genr_head_0')(layer)
-    layer = new_sheet(self, filters, (3,3), 'same', 'genr_head_1')(layer)
+    layer = new_sheet(filters, (4,4), 'same', 'genr_head_0')(layer)
+    layer = new_sheet(filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
     for i in range(layers):
         layer = UpSampling2D(2)(layer)
         if i == layers-1: previous_step = layer
             
-        layer = new_sheet(self, filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
+        layer = new_sheet(filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
     next_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
     
     #smooth fading
     if previous_step is not None: 
         previous_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None))(previous_step) 
-        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha.tensor)([previous_step, next_step])
+        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
     else:
         layer = next_step
       
@@ -166,7 +177,7 @@ def build_discriminator(self):
     
     #Growing layers
     for i in range(layers, 0, -1):
-        layer = new_sheet(self, filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
+        layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
 
         #smooth fading
@@ -178,19 +189,17 @@ def build_discriminator(self):
             previous_step = LeakyReLU(alpha=0.2)(previous_step) 
             previous_step = utils.PixelNorm()(previous_step)
         
-            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha.tensor)([previous_step, next_step])
+            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
                 
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
-    layer = new_sheet(self, filters, (3,3), 'same', 'disc_head_0')(layer)
-    layer = new_sheet(self, filters, (4,4), 'valid', 'disc_head_1')(layer)
+    layer = new_sheet(filters, (3,3), 'same', 'disc_head_0')(layer)
+    layer = new_sheet(filters, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
     layer = Dense_sw(1, activation=self.disc_activation, kernel_initializer = initialization)(layer)
 
     return Model(input_layer, layer)
-
-
     
 #-------------------------------
 #  Main code
@@ -219,25 +228,7 @@ def sample_images(gen, file):
     fig.savefig(file)
     plt.close()   
     
-def rebuild(self):
-    global layers, inp_shape
-    if layers !=0:
-        transition_alpha.set(0)
-                    
-        #copy old weights to new expanded network
-        for l in self.generator.layers:
-            weights[l.name] = l.get_weights() 
-            
-        for l in self.discriminator.layers:
-            weights[l.name] = l.get_weights() 
-    
-    
-    sz = 2 ** (layers + 2)
-    self.input_shape = (sz,sz,channels)
-    self.build_models()
-    
-    
-    layers += 1
+
 
 
     
@@ -252,22 +243,36 @@ if len(X_train.shape)<4:
     X_train = np.expand_dims(X_train, axis=3)
     
 #here has to be a step with data augmentation    
-    
-def correct_data(self):
-    sz = X_train.shape[1] // self.input_shape[0]
-    self.data_set = block_reduce(self.data_set, block_size=(1, sz, sz, 1), func=np.mean) 
 
-    
-#Build and train GAN
-gan = WGAN_GP((4,4, channels), noise_dim)
-gan.build_generator = lambda self=gan: build_generator(self)
-gan.build_discriminator = lambda self=gan: build_discriminator(self)
-gan.rebuild_function = lambda self=gan: rebuild(self)
-gan.correct_data = lambda self=gan: correct_data(self)
-#gan.build_models() 
+ 
+epochs_list = [2000, 3000, 4000, 4000]
+batch_size_list = [16, 16, 16, 16]  
+image_size_list = [4, 8, 16, 32] 
 
-def callback():
-    sample_images(gan.generator, 'pg_gan_results.png')
-    plotter.save_hist_image(gan.history, 'pg_gan_history.png')
+for i in range(len(epochs_list)):    
+    epochs = epochs_list[i]
+    batch_size = batch_size_list[i]
     
-gan.train(X_train, epochs = [4000, 8000, 16000, 32000], batch_size = [16, 16, 16, 16], checkpoint_callback = callback, validation_split = 0.1)    
+    sz = X_train.shape[1] // image_size_list[i]
+    data_set = block_reduce(X_train, block_size=(1, sz, sz, 1), func=np.mean) 
+    print(data_set.shape)
+    
+    #Build and train GAN
+    gan = WGAN_GP(data_set.shape[1:], noise_dim, optimizer = Adam(0.0002, 0.5, clipnorm = 1))
+    gan.build_generator = lambda self=gan: build_generator(self)
+    gan.build_discriminator = lambda self=gan: build_discriminator(self)
+
+    def callback():
+        sample_images(gan.generator, 'pg_gan.png')
+        
+    gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)    
+    
+    
+    #copy old weights to new expanded network
+    for l in gan.generator.layers:
+        weights[l.name] = l.get_weights() 
+        
+    for l in gan.discriminator.layers:
+        weights[l.name] = l.get_weights() 
+            
+    layers += 1

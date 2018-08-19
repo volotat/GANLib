@@ -21,11 +21,8 @@ class WGAN_GP(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
         super(WGAN_GP, self).__init__(input_shape, latent_dim , **kwargs)
         
-    def set_models_params(self, optimizer):
-        if optimizer is None:   
-            self.optimizer = Adam(0.0002, 0.5, 0.9)
-        else:
-            self.optimizer = optimizer
+    def set_models_params(self):
+        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, 0.9)
             
         self.loss = utils.ident_loss
         self.disc_activation = 'linear'    
@@ -45,6 +42,7 @@ class WGAN_GP(GAN):
         def norm(x, axis):
             return K.sqrt(K.sum(K.square(x), axis=axis))
             
+        #compute gradient penalty with respect to weighted average between real and generated images    
         def f_ddx(genr, real):
             epsilon = K.random_uniform([], 0.0, 1.0)
             x_hat = epsilon * real + (1 - epsilon) * genr
@@ -54,8 +52,6 @@ class WGAN_GP(GAN):
             ddx = K.mean(K.square(ddx - 1.0) * lambda_scale)
             
             return ddx
-            
-            
             
         #-------------------------------
         # Graph for Generator
@@ -78,6 +74,7 @@ class WGAN_GP(GAN):
         self.discriminator.trainable = True
         self.generator.trainable = False 
         
+        #Compute the critic loss:
         L_D_tns = Lambda(lambda x: K.mean(x[0] - x[1] + f_ddx(x[2], x[3])))([D(genr_img), D(real_img), genr_img, real_img])
         
         self.disc_model = Model([real_img, noise], L_D_tns)

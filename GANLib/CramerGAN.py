@@ -23,11 +23,8 @@ class CramerGAN(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
         super(CramerGAN, self).__init__(input_shape, latent_dim , **kwargs)
         
-    def set_models_params(self, optimizer):
-        if optimizer is None:   
-            self.optimizer = Adam(0.0002, 0.5, 0.9)
-        else:
-            self.optimizer = optimizer
+    def set_models_params(self):
+        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, 0.9)
             
         self.loss = utils.ident_loss
         self.disc_activation = 'linear'    
