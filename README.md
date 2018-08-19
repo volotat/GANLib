@@ -28,7 +28,7 @@ AAE: completed
 CGAN: completed  
 CramerGAN: completed  
 GAN: completed  
-DiscoGAN: works as supposed to, but do not store all necessary history  
-WGAP GP: in progress  
-ProgGAN: in progress 
+WGAP GP: completed  
+DiscoGAN: in progress  
+ProgGAN: in progress  
 
