@@ -9,8 +9,8 @@ import numpy as np
 
 
 # Specify models for Generator and Discriminator
-def build_generator(self):
-    input_lat = Input(shape=(self.latent_dim,))
+def build_generator(gan):
+    input_lat = Input(shape=(gan.latent_dim,))
     
     layer = Dense(128, activation = 'relu')(input_lat)
     layer = Dense(256, activation = 'relu')(layer)
@@ -19,13 +19,13 @@ def build_generator(self):
 
     return Model(input_lat, img)
         
-def build_discriminator(self):
-    input_img = Input(shape=self.input_shape)
+def build_discriminator(gan):
+    input_img = Input(shape=gan.input_shape)
     
     layer = Flatten()(input_img)
     layer = Dense(256, activation = 'relu')(layer)
     layer = Dense(128, activation = 'relu')(layer)
-    valid = Dense(1, activation=self.disc_activation)(layer)
+    valid = Dense(1, activation=gan.disc_activation)(layer)
     
     return Model(input_img, valid) 
   
@@ -66,8 +66,8 @@ noise_dim = 100
 
 # Build GAN and train it on data
 gan = GAN(data_shape, noise_dim) #define type of Generative model
-gan.build_generator = lambda self=gan: build_generator(self) #define generator build function
-gan.build_discriminator = lambda self=gan: build_discriminator(self) #define discriminator build function
+gan.generator = build_generator(gan) #define generator model
+gan.discriminator = build_discriminator(gan) #define discriminator model
 
 def callback():
     sample_images(gan.generator, 'simple_gan.png')

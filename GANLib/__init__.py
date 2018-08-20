@@ -5,11 +5,11 @@ from . import metrics
 from . import plotter
 from . import utils
 
-from .AAE import AAE
-from .CGAN import CGAN
-from .CramerGAN import CramerGAN
-from .DiscoGAN import DiscoGAN
-from .GAN import GAN
-from .WGAN_GP import WGAN_GP
+from .GANs.AAE import AAE
+from .GANs.CGAN import CGAN
+from .GANs.CramerGAN import CramerGAN
+from .GANs.DiscoGAN import DiscoGAN
+from .GANs.GAN import GAN
+from .GANs.WGAN_GP import WGAN_GP
 
 __version__ = '0.0.5'

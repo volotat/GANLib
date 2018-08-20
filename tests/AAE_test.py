@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-noise_dim = 2
+noise_dim = 10
 
 def build_encoder(self):
     input_img = Input(shape=self.input_shape)
@@ -98,10 +98,9 @@ if len(X_train.shape)<4:
     
 #Run GAN for 20000 iterations
 gan = AAE(X_train.shape[1:], noise_dim)
-gan.build_encoder = lambda self=gan: build_encoder(self)
-gan.build_decoder = lambda self=gan: build_decoder(self)
-gan.build_discriminator = lambda self=gan: build_discriminator(self)
-#gan.build_models()
+gan.encoder = build_encoder(gan)
+gan.decoder = build_decoder(gan)
+gan.discriminator = build_discriminator(gan)
 
 def callback():
     path = 'images/'+img_path+'/'

@@ -31,36 +31,8 @@ from skimage.measure import block_reduce
 # Auxiliary functions
 #-------------------------------  
 
-def l2_norm(v, eps=1e-12):
-    return v / (K.sum(v ** 2) ** 0.5 + eps)
-    
-def spectral_norm(w, iteration=1):
-    #From "Spectral Normalization for GANs" paper 
-    #https://arxiv.org/pdf/1802.05957.pdf
-    
-    w_shape = w.shape.as_list()
-    w = K.reshape(w, [-1, w_shape[-1]])
-
-    u = K.truncated_normal([1, w_shape[-1]])
-    
-    u_hat = u
-    v_hat = None
-    for i in range(iteration): #power iteration, usually iteration = 1 will be enough
-        v_ = K.dot(u_hat, K.transpose(w))
-        v_hat = l2_norm(v_)
-
-        u_ = K.dot(v_hat, w)
-        u_hat = l2_norm(u_)
-
-    sigma = K.dot(K.dot(v_hat, w), K.transpose(u_hat))
-    w_norm = w / sigma
-
-    w_norm = K.reshape(w_norm, w_shape)
-
-    return w_norm
-
 def dynamic_he_scale(x, gain = np.sqrt(2)): 
-    #He's normal dynamic weight scaler. Used in paper. Completely not working for me. Probably I'm doing something horribly wrong.
+    #He's normal dynamic weight scaler
     shape = x.shape.as_list()
     fan_in, _ = keras.initializers._compute_fans(shape)
     std = np.sqrt(gain / max(1., fan_in)) 
@@ -112,24 +84,23 @@ class Dense_sw(Dense): #Dense layer with dynamically scaled weights
 # Define models structure
 #-------------------------------      
       
-initialization = 'he_normal' 
+initialization = 'he_normal' #keras.initializers.RandomNormal(0, 1)  
+weights_scale_func = dynamic_he_scale
+
 filters = 64
 noise_dim = 64 
-weights_scale_func = spectral_norm #dynamic_he_scale, lambda x: x
-
-
-layers = 0
-weights = {}
-
 channels = 3
 
+weights = {}
+sheets = 0
 
-def new_sheet(filters, kernel_size, padding, name):
+
+def new_sheet(filters, kernel_size, padding, name, pix_norm = True):
     def func(layer):
         w = weights.get(name,None)
         layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, kernel_initializer = initialization)(layer)
         layer = LeakyReLU(alpha=0.2)(layer) 
-        layer = utils.PixelNorm()(layer)
+        if pix_norm: layer = utils.PixelNorm()(layer)
         return layer
     return func
     
@@ -148,9 +119,9 @@ def build_generator(self):
     layer = new_sheet(filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
-    for i in range(layers):
+    for i in range(sheets):
         layer = UpSampling2D(2)(layer)
-        if i == layers-1: previous_step = layer
+        if i == sheets-1: previous_step = layer
             
         layer = new_sheet(filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
@@ -176,12 +147,12 @@ def build_discriminator(self):
     layer = utils.PixelNorm()(layer)
     
     #Growing layers
-    for i in range(layers, 0, -1):
+    for i in range(sheets, 0, -1):
         layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
 
         #smooth fading
-        if i == layers:
+        if i == sheets:
             next_step = layer
             
             previous_step = AveragePooling2D(2)(input_layer)
@@ -228,9 +199,6 @@ def sample_images(gen, file):
     fig.savefig(file)
     plt.close()   
     
-
-
-
     
 # Load the dataset
 (X_train, labels), (_, _) = cifar10.load_data()
@@ -245,7 +213,7 @@ if len(X_train.shape)<4:
 #here has to be a step with data augmentation    
 
  
-epochs_list = [2000, 3000, 4000, 4000]
+epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
 
@@ -257,22 +225,21 @@ for i in range(len(epochs_list)):
     data_set = block_reduce(X_train, block_size=(1, sz, sz, 1), func=np.mean) 
     print(data_set.shape)
     
-    #Build and train GAN
-    gan = WGAN_GP(data_set.shape[1:], noise_dim, optimizer = Adam(0.0002, 0.5, clipnorm = 1))
-    gan.build_generator = lambda self=gan: build_generator(self)
-    gan.build_discriminator = lambda self=gan: build_discriminator(self)
+    # Build and train GAN
+    gan = WGAN_GP(data_set.shape[1:], noise_dim, optimizer = Adam(0.0002, 0.5, 0.9, clipnorm = 10))
+    gan.generator = build_generator(gan) #define generator model
+    gan.discriminator = build_discriminator(gan) #define discriminator model
 
     def callback():
         sample_images(gan.generator, 'pg_gan.png')
         
     gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)    
     
-    
-    #copy old weights to new expanded network
+    # Save weights of the network
     for l in gan.generator.layers:
         weights[l.name] = l.get_weights() 
         
     for l in gan.discriminator.layers:
         weights[l.name] = l.get_weights() 
             
-    layers += 1
+    sheets += 1

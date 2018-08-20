@@ -140,9 +140,8 @@ for i in range(len(tests['dataset'])):
 
     #Run GAN for 20000 iterations
     gan = WGAN_GP(X_train.shape[1:], noise_dim)
-    gan.build_generator = lambda self=gan: model.build_generator(self)
-    gan.build_discriminator = lambda self=gan: model.build_discriminator(self)
-    #gan.build_models()
+    gan.generator = model.build_generator(gan)
+    gan.discriminator = model.build_discriminator(gan)
 
     def callback():
         path = 'images/WGAN_GP/'+tests['img_path'][i]+'/conv_'
