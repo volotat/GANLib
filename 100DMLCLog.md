@@ -312,3 +312,10 @@
 **Today's progress** :  PG GAN almost complied. API of the library a bit more intuitive now.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/0c4831816145f65eb818fe3f1baf55e019e6a2ae)
+
+
+## Day 46 : August 21, 2018
+ 
+**Today's progress** :  Completed PG GAN example.
+
+**Link to work:**  [Commit]()

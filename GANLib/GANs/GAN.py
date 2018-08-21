@@ -3,7 +3,6 @@ from keras.models import Model, load_model
 from keras.optimizers import Adam
 import os
 import numpy as np
-import warnings
 
 from .. import metrics
 from .. import utils
@@ -128,43 +127,12 @@ class GAN(object):
         
         
     def build_models(self, files = None, custom_objects = None):
-        '''
-        self.set_models_params()
-        
-        loaded = False
-        if files is not None:
-            # Try to load models
-            try:
-                self.generator = load_model(files[0], custom_objects=custom_objects)
-                self.discriminator = load_model(files[1], custom_objects=custom_objects)
-                loaded = True
-                print('models loaded')  
-            except IOError as e:
-                warnings.warn("Files cannot be opened. Models will be rebuilded instead!")
-                
-        if not loaded:
-            # Build models
-            if self.build_discriminator is None or self.build_generator is None:
-                raise Exception("Model building functions are not defined")
-            else:   
-                self.generator = self.build_generator()
-                self.discriminator = self.build_discriminator()
-            
-            print('models builded')  
-        '''    
-        
         for model in self.models:
             if not hasattr(self, model): raise Exception("%s are not defined!"%(model))
             
         self.build_graph()
-        
-          
-    '''        
-    def save(self, files):
-        self.generator.save(files[0])
-        self.discriminator.save(files[1])
-    '''    
-        
+      
+      
     def test_network(self, batch_size):
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
         gen_imgs = self.generator.predict([noise])

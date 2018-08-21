@@ -31,6 +31,21 @@ from skimage.measure import block_reduce
 # Auxiliary functions
 #-------------------------------  
 
+def augment(data):
+    off_x_p = data.copy()
+    off_x_p[:,1:,:,:] = off_x_p[:,:-1,:,:]
+    off_x_m = data.copy()
+    off_x_p[:,:-1,:,:] = off_x_p[:,1:,:,:]
+    data = np.concatenate((data,off_x_p,off_x_m), axis = 0)
+    
+    off_y_p = data.copy()
+    off_y_p[:,:,1:,:] = off_y_p[:,:,:-1,:]
+    off_y_m = data.copy()
+    off_y_m[:,:,:-1,:] = off_y_m[:,:,1:,:]
+    data = np.concatenate((data,off_y_p,off_y_m), axis = 0)
+    
+    return data
+
 def dynamic_he_scale(x, gain = np.sqrt(2)): 
     #He's normal dynamic weight scaler
     shape = x.shape.as_list()
@@ -201,17 +216,21 @@ def sample_images(gen, file):
     
     
 # Load the dataset
-(X_train, labels), (_, _) = cifar10.load_data()
-indx = np.where(labels == 8)[0]
-X_train = X_train[indx]
+(dataseta, labelsa), (datasetb, labelsb) = cifar10.load_data()
+dataset = np.concatenate((dataseta,datasetb), axis = 0)
+labels = np.concatenate((labelsa,labelsb), axis = 0)
 
-#Configure input
-X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-if len(X_train.shape)<4:
-    X_train = np.expand_dims(X_train, axis=3)
+indx = np.where(labels == 8)[0] # we choose only one specific domain from the dataset
+dataset = dataset[indx]
+
+# Configure input
+dataset = (dataset.astype(np.float32) - 127.5) / 127.5
+if len(dataset.shape)<4:
+    dataset = np.expand_dims(dataset, axis=3)
     
-#here has to be a step with data augmentation    
 
+# 6000 examples is not enough, so we augment dataset by shifting it along axis by 1 pixel 
+dataset = augment(dataset)
  
 epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
@@ -221,8 +240,8 @@ for i in range(len(epochs_list)):
     epochs = epochs_list[i]
     batch_size = batch_size_list[i]
     
-    sz = X_train.shape[1] // image_size_list[i]
-    data_set = block_reduce(X_train, block_size=(1, sz, sz, 1), func=np.mean) 
+    sz = dataset.shape[1] // image_size_list[i]
+    data_set = block_reduce(dataset, block_size=(1, sz, sz, 1), func=np.mean) 
     print(data_set.shape)
     
     # Build and train GAN
