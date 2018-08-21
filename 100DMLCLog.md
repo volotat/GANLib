@@ -318,4 +318,4 @@
  
 **Today's progress** :  Completed PG GAN example.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/ea7296dbbf451ce05b10103cf0c5f94e03db6d10)
