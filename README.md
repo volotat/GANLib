@@ -20,7 +20,8 @@ pip3 install -e .
 
 
 ### Examples
-Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/simple_gan.py)
+Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/simple_gan.py)  
+Progressive Growing of GANs: [pg_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/pg_gan.py)
 
 
 ### Current progress for each module
@@ -30,5 +31,4 @@ CramerGAN: completed
 GAN: completed  
 WGAP GP: completed  
 DiscoGAN: in progress  
-ProgGAN: in progress  
 
