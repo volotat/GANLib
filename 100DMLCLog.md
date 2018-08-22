@@ -319,3 +319,10 @@
 **Today's progress** :  Completed PG GAN example.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/ea7296dbbf451ce05b10103cf0c5f94e03db6d10)
+
+
+## Day 47 : August 22, 2018
+ 
+**Today's progress** :  Started rebuilding DiscoGAN. Also experimenting with some ideas for image generation.
+
+**Link to work:**  [Commit]()

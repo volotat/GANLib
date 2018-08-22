@@ -1,56 +1,39 @@
-from keras.layers import Input
+from keras.layers import Input, Lambda, Dense
 from keras.models import Model, load_model
 from keras.optimizers import Adam
 import os
 import numpy as np
 
+import keras.backend as K
 
 from .. import metrics
+from .. import utils
+from .GAN import GAN
 
-#                   DiscoGAN
-#   Paper: https://arxiv.org/pdf/1703.05192.pdf
-
-#       Description:
-#   Takes as input two sets from different domains and by finding correlations 
-#   between them encode samples from one domain to another and backwards. 
-#   In limit it suppose to find one to one bijection mapping between this sets.
-
-#       Note:
-#   Discriminator works in a bit different way that it described in the paper 
-#   simply because it shows better performance in my experiments.
-
-#       To do:
-#   Find a way how to split sets into train and test ones
-#   Define metric and make results of metric_test store in history
-
-
-class DiscoGAN(GAN):
+class XGAN(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
-        super(DiscoGAN, self).__init__(input_shape, latent_dim , **kwargs)
+        super(XGAN, self).__init__(input_shape, latent_dim , **kwargs)
         
     def set_models_params(self):
         if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, clipnorm = 10)
             
-        self.models = ['encoder', 'decoder', 'discriminator']
+        self.models = ['identificator', 'generator']
         self.loss = 'mse'
         self.disc_activation = 'sigmoid'    
+        self.indexes_weights = None
         
     def build_graph(self):
-        '''
         TINY = 1e-8
     
-        E = self.encoder
-        D = self.decoder
-        DSC = self.discriminator
+        I = self.identificator
+        G = self.generator
+       
+        inputs = I.inputs
         
-        real_img = Input(shape=self.input_shape)
-        real_lat = Input(shape=(self.latent_dim,))
-        real_val = DSC(real_lat) 
-        genr_val = DSC(E(real_img))
-        
-        self.encoded_decoded = Model(real_img, D(E(real_img)))
+        self.encoded_decoded = Model(inputs, G(I(inputs)))
         self.encoded_decoded.compile(loss=self.loss, optimizer=self.optimizer)
         
+        '''
         self.discriminator.trainable = True
         self.encoder.trainable = False
         
@@ -67,10 +50,15 @@ class DiscoGAN(GAN):
         '''
 
     def prepare_data(self, data_set, validation_split, batch_size):
-        super(DiscoGAN, self).prepare_data(data_set, validation_split, batch_size)
+        super(XGAN, self).prepare_data(data_set, validation_split, batch_size)
         
+        #self.data_size = self.train_set.shape[0]
+        #self.eye = np.eye(self.data_size)
         #This values will be used in a way that do no affect the network
         self.dummy = np.zeros((batch_size, 1))
+        
+        
+        
         
     def train_on_batch(self, batch_size):
         # ---------------------
@@ -78,12 +66,15 @@ class DiscoGAN(GAN):
         # ---------------------
         
         # Select a random batch of images
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
+        idx = np.random.randint(0, self.train_set[0].shape[0], batch_size)
+        
+        #poss = self.train_set[0][idx]
+        indx = self.train_set[0][idx]
+        imgs = self.train_set[1][idx]
         
         # Train the encoder-decoder model as usual autoencoder
-        self.m_loss = self.encoded_decoded.train_on_batch([imgs], imgs)
-        
+        self.m_loss = self.encoded_decoded.train_on_batch([indx], imgs)
+        '''
         # ---------------------
         #  Regularization
         # ---------------------
@@ -95,7 +86,9 @@ class DiscoGAN(GAN):
         
         #train encode to produce right distribution
         g_loss = self.genr_model.train_on_batch([imgs], self.dummy)
-        
+        '''
+        d_loss = 0
+        g_loss = self.m_loss
         return d_loss, g_loss
         
     def test_network(self, batch_size):

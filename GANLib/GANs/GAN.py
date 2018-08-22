@@ -86,15 +86,16 @@ class GAN(object):
             self.valid_set = None
     
         #collect statistical info of data
-        self.data_set_std = np.std(data_set,axis = 0)
-        self.data_set_mean = np.mean(data_set,axis = 0)
+        #self.data_set_std = np.std(data_set,axis = 0)
+        #self.data_set_mean = np.mean(data_set,axis = 0)
     
         # Adversarial ground truths
-        out_shape = self.discriminator.output_shape
-        self.valid = np.ones((batch_size,) + out_shape[1:])
-        self.fake = np.zeros((batch_size,) + out_shape[1:])
-        #self.valid = np.ones((batch_size, 1))
-        #self.fake = np.zeros((batch_size, 1))
+        if hasattr(self, 'discriminator'):
+            out_shape = self.discriminator.output_shape
+            self.valid = np.ones((batch_size,) + out_shape[1:])
+            self.fake = np.zeros((batch_size,) + out_shape[1:])
+            #self.valid = np.ones((batch_size, 1))
+            #self.fake = np.zeros((batch_size, 1))
         
         
     def train_on_batch(self, batch_size):
@@ -199,8 +200,9 @@ class GAN(object):
         self.epochs.set(epochs)
         
         # Build Network
-        self.build_models()
+       
         self.prepare_data(data_set, validation_split, batch_size)
+        self.build_models()
         
         # Train Network
         for epoch in range(epochs):

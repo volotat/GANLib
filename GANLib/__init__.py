@@ -12,4 +12,6 @@ from .GANs.DiscoGAN import DiscoGAN
 from .GANs.GAN import GAN
 from .GANs.WGAN_GP import WGAN_GP
 
+from .GANs.XGAN import XGAN
+
 __version__ = '0.0.5'

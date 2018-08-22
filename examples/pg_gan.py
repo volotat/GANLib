@@ -18,7 +18,7 @@ from skimage.measure import block_reduce
 
 
 
-#                   Progressively growing of GANs
+#                   Progressive Growing of GANs
 #   Paper: https://arxiv.org/pdf/1710.10196.pdf
 
 #       Description:
