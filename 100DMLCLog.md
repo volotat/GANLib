@@ -325,4 +325,4 @@
  
 **Today's progress** :  Started rebuilding DiscoGAN. Also experimenting with some ideas for image generation.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/f7b9a676827f0d9a9e0b09d1d25f2af2208ebccb)
