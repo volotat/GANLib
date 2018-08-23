@@ -330,6 +330,6 @@
 
 ## Day 48 : August 23, 2018
  
-**Today's progress** :  Continue working on DiscoGAN
+**Today's progress** :  Continue working on DiscoGAN.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5090320d953eead897f188b25bad9abc1deb61ba)
