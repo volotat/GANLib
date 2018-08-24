@@ -86,16 +86,16 @@ class GAN(object):
             self.valid_set = None
     
         #collect statistical info of data
-        #self.data_set_std = np.std(data_set,axis = 0)
-        #self.data_set_mean = np.mean(data_set,axis = 0)
+        self.data_set_std = np.std(data_set,axis = 0)
+        self.data_set_mean = np.mean(data_set,axis = 0)
     
         # Adversarial ground truths
         if hasattr(self, 'discriminator'):
-            out_shape = self.discriminator.output_shape
-            self.valid = np.ones((batch_size,) + out_shape[1:])
-            self.fake = np.zeros((batch_size,) + out_shape[1:])
-            #self.valid = np.ones((batch_size, 1))
-            #self.fake = np.zeros((batch_size, 1))
+            #out_shape = self.discriminator.output_shape
+            #self.valid = np.ones((batch_size,) + out_shape[1:])
+            #self.fake = np.zeros((batch_size,) + out_shape[1:])
+            self.valid = np.ones((batch_size, 1))
+            self.fake = np.zeros((batch_size, 1))
         
         
     def train_on_batch(self, batch_size):

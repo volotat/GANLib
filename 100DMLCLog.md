@@ -333,3 +333,10 @@
 **Today's progress** :  Continue working on DiscoGAN.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5090320d953eead897f188b25bad9abc1deb61ba)
+
+
+## Day 49 : August 24, 2018
+ 
+**Today's progress** :  Completed with DiscoGAN, but it still do not store history. I need to rebuild it first.
+
+**Link to work:**  [Commit]()

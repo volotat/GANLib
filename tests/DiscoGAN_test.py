@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def build_encoder(self):
-    input_img = Input(shape=self.a_set_shape)
+def build_encoder(gan):
+    input_img = Input(shape=gan.input_shape)
 
     layer = input_img
     layer = Flatten()(layer)
@@ -32,8 +32,8 @@ def build_encoder(self):
     
     return Model(input_img, output_img)
     
-def build_decoder(self):
-    input_img = Input(shape=self.b_set_shape)
+def build_decoder(gan):
+    input_img = Input(shape=gan.input_shape)
 
     layer = input_img
     layer = Flatten()(layer)
@@ -51,9 +51,9 @@ def build_decoder(self):
     
     return Model(input_img, output_img)    
 
-def build_discriminator(self):
-    input_a = Input(shape=self.a_set_shape)
-    input_b = Input(shape=self.b_set_shape)
+def build_discriminator(gan):
+    input_a = Input(shape=gan.input_shape)
+    input_b = Input(shape=gan.input_shape)
     layer = concatenate([input_a, input_b])
     
     layer = Flatten()(layer)
@@ -103,16 +103,15 @@ mnist_set = np.expand_dims(mnist_set, axis=3)
 fashion_set = (fashion_set.astype(np.float32) - 127.5) / 127.5
 fashion_set = np.expand_dims(fashion_set, axis=3)
 
-set_domain_A = mnist_set  [:128]
-set_domain_B = fashion_set[:128]   
+set_domain_A = mnist_set  [:512]
+set_domain_B = fashion_set[:512]   
 
 
 #Run GAN for 20000 iterations
-gan = DiscoGAN(mnist_set.shape[1:], fashion_set.shape[1:])
-gan.build_encoder = lambda self=gan: build_encoder(self)
-gan.build_decoder = lambda self=gan: build_decoder(self)
-gan.build_discriminator = lambda self=gan: build_discriminator(self)
-gan.build_models()
+gan = DiscoGAN((28,28,1), 100)
+gan.encoder = build_encoder(gan)
+gan.decoder = build_decoder(gan)
+gan.discriminator = build_discriminator(gan)
 
 def callback():
     path = 'images/'+img_path+'/'
@@ -123,6 +122,6 @@ def callback():
     sample_images(gan.encoder, path+'A_encoded.png', set_domain_A)
     sample_images(gan.decoder, path+'B_encoded.png', set_domain_B)
     
-    plotter.save_hist_image(gan.history, path+'History.png')
+    #plotter.save_hist_image(gan.history, path+'History.png')
     
-gan.train(set_domain_A, set_domain_B, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    
+gan.train([set_domain_A, set_domain_B], epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False)    
