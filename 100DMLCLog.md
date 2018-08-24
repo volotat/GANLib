@@ -339,4 +339,4 @@
  
 **Today's progress** :  Completed with DiscoGAN, but it still do not store history. I need to rebuild it first.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/4ae7626b18bb71421f6e0ff07ac40cc82a5d168e)
