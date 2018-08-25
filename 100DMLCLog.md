@@ -340,3 +340,10 @@
 **Today's progress** :  Completed with DiscoGAN, but it still do not store history. I need to rebuild it first.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/4ae7626b18bb71421f6e0ff07ac40cc82a5d168e)
+
+
+## Day 50 : August 25, 2018
+ 
+**Today's progress** :  Trying to improve history collection system.
+
+**Link to work:**  [Commit]()

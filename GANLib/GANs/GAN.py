@@ -85,10 +85,6 @@ class GAN(object):
             self.train_set = data_set
             self.valid_set = None
     
-        #collect statistical info of data
-        self.data_set_std = np.std(data_set,axis = 0)
-        self.data_set_mean = np.mean(data_set,axis = 0)
-    
         # Adversarial ground truths
         if hasattr(self, 'discriminator'):
             #out_shape = self.discriminator.output_shape
@@ -149,11 +145,8 @@ class GAN(object):
         else:
             test_val = np.zeros(batch_size)
         
-        noise = np.random.normal(self.data_set_mean, self.data_set_std, (batch_size,)+ self.input_shape)
-        cont_val = self.discriminator.predict(noise)
-        
         metric = self.metric_test(self.train_set, batch_size)    
-        return gen_val, train_val, test_val, cont_val, metric
+        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
         
     
     def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, collect_history = True):
@@ -188,13 +181,16 @@ class GAN(object):
 
         #mean min max
         max_hist_size = epochs//checkpoint_range + 1
-        history = { 'gen_val'    :np.zeros((max_hist_size,3)), 
+        history = { 'best_metric':0,
+                    'hist_size'  :0}
+        
+        '''
+        gen_val'    :np.zeros((max_hist_size,3)), 
                     'train_val'  :np.zeros((max_hist_size,3)), 
                     'test_val'   :np.zeros((max_hist_size,3)), 
                     'control_val':np.zeros((max_hist_size,3)), 
                     'metric'     :np.zeros((max_hist_size,3)),
-                    'best_metric':0,
-                    'hist_size'  :0}
+        '''            
         
         self.epoch.set(0)
         self.epochs.set(epochs)
@@ -213,24 +209,24 @@ class GAN(object):
             # Save history
             if epoch % checkpoint_range == 0:
                 if not collect_history:
-                    if verbose:
-                        print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
+                    if verbose: print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
                 else:
-                    gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
-                    
-                    if verbose:
-                        print ("%d [D loss: %f] [G loss: %f] [validations TRN: %f, TST: %f] [metric: %f]" % (epoch, d_loss, g_loss, np.mean(train_val), np.mean(test_val), np.mean(metric)))
-                    
+                    #gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
+                    dict_of_vals = self.test_network(128)
                     hist_size = history['hist_size'] = history['hist_size']+1
-                    history['gen_val']    [hist_size-1] = np.mean(gen_val),  np.min(gen_val),  np.max(gen_val)
-                    history['train_val']  [hist_size-1] = np.mean(train_val),np.min(train_val),np.max(train_val)
-                    history['test_val']   [hist_size-1] = np.mean(test_val), np.min(test_val), np.max(test_val)
-                    history['control_val'][hist_size-1] = np.mean(cont_val), np.min(cont_val), np.max(cont_val) 
-                    history['metric']     [hist_size-1] = np.mean(metric),   np.min(metric),   np.max(metric)
+                    metric = np.mean(dict_of_vals['metric'])
                     
-                    if np.mean(metric)*0.98 < self.best_metric or self.best_model == None:
+                    for k, v in dict_of_vals.items():
+                        if k not in history:
+                            history[k] = np.zeros((max_hist_size,3))
+                        
+                        history[k][hist_size-1] = np.mean(v),  np.min(v),  np.max(v)
+                    
+                    if verbose: print ("%d [D loss: %f] [G loss: %f] [%s: %f]" % (epoch, d_loss, g_loss, 'metric', metric))
+                    
+                    if metric*0.98 < self.best_metric or self.best_model == None:
                         #self.best_model = self.generator.get_weights()
-                        self.best_metric = np.mean(metric)
+                        self.best_metric = metric
                         history['best_metric'] = self.best_metric
                         
                     self.history = history

@@ -110,7 +110,5 @@ class XGAN(GAN):
         else:
             test_val = np.zeros(batch_size)
         
-        cont_val = np.zeros(1)
-        
         metric = self.m_loss    
-        return gen_val, train_val, test_val, cont_val, metric
+        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}

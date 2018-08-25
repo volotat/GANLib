@@ -14,11 +14,13 @@ def save_hist_image(hist, file):
     plt.xlabel('Best result: %f'%hist['best_metric'])
     plt.grid(True)
 
+    
     plt.subplot(2, 1, 2)
-    for i in range(len(hist) - 3):
+    for i in range(len(hist)):
         key = list(hist.keys())[i]
-        plt.plot(hist[key][:hist_size,0], '-',linewidth=0.8, label=key, color='C'+str(i))
-
+        if isinstance(hist[key], np.ndarray) and key != 'metric':
+            plt.plot(hist[key][:hist_size,0], '-',linewidth=0.8, label=key, color='C'+str(i))
+    
     plt.grid(True)
     plt.legend()
 

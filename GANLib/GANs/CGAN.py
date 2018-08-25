@@ -131,13 +131,13 @@ class CGAN(GAN):
             test_val = self.discriminator.predict([self.valid_set_data[idx], self.valid_set_labels[idx]])
         else:
             test_val = np.zeros(batch_size)
-        
+        '''
         noise_as_data = np.random.normal(self.data_set_mean, self.data_set_std, (batch_size,)+ self.input_shape)
         #noise_as_labels = np.random.normal(self.label_set_mean, self.label_set_std, (batch_size,)+ self.label_shape)
         data_cont_val  = self.discriminator.predict([noise_as_data, labels])
         #label_cont_val = self.discriminator.predict([imgs, noise_as_labels])
         cont_val = data_cont_val
-        
+        '''
         metric = self.metric_test(self.train_set_data, self.train_set_labels, batch_size)   
         
-        return gen_val, train_val, test_val, cont_val, metric
+        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
