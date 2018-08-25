@@ -346,4 +346,4 @@
  
 **Today's progress** :  Trying to improve history collection system.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/81082a53663b108879a282e5bbe5fc59ec532533)
