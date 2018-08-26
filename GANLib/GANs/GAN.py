@@ -183,15 +183,7 @@ class GAN(object):
         max_hist_size = epochs//checkpoint_range + 1
         history = { 'best_metric':0,
                     'hist_size'  :0}
-        
-        '''
-        gen_val'    :np.zeros((max_hist_size,3)), 
-                    'train_val'  :np.zeros((max_hist_size,3)), 
-                    'test_val'   :np.zeros((max_hist_size,3)), 
-                    'control_val':np.zeros((max_hist_size,3)), 
-                    'metric'     :np.zeros((max_hist_size,3)),
-        '''            
-        
+                    
         self.epoch.set(0)
         self.epochs.set(epochs)
         
@@ -211,8 +203,10 @@ class GAN(object):
                 if not collect_history:
                     if verbose: print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
                 else:
-                    #gen_val, train_val, test_val, cont_val, metric = self.test_network(128)
                     dict_of_vals = self.test_network(128)
+                    dict_of_vals['D loss'] = d_loss
+                    dict_of_vals['G loss'] = g_loss
+                    
                     hist_size = history['hist_size'] = history['hist_size']+1
                     metric = np.mean(dict_of_vals['metric'])
                     
@@ -242,6 +236,7 @@ class GAN(object):
         
         return self.history   
 
-
+    def save_history_to_image(file):
+        utils.save_hist_image(self.history, file, graphs = (['metric'], ['D loss', 'G loss']), scales = ('log', 'linear'))
         
    

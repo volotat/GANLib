@@ -1,5 +1,4 @@
 from GANLib import AAE
-from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, Lambda
@@ -105,6 +104,6 @@ gan.discriminator = build_discriminator(gan)
 def callback():
     path = 'images/'+img_path+'/'
     sample_images(gan.decoder, path+'decoded.png')
-    plotter.save_hist_image(gan.history, path+'History.png')
+    gan.save_history_to_image(path+'History.png')
     
 gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)    

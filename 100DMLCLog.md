@@ -347,3 +347,10 @@
 **Today's progress** :  Trying to improve history collection system.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/81082a53663b108879a282e5bbe5fc59ec532533)
+
+
+## Day 51 : August 26, 2018
+ 
+**Today's progress** :  History collection mechanism significantly improved. Now it much more general and easier to manage.
+
+**Link to work:**  [Commit]()

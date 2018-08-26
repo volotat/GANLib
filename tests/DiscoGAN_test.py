@@ -1,5 +1,4 @@
 from GANLib import DiscoGAN
-from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, GaussianNoise
@@ -122,6 +121,6 @@ def callback():
     sample_images(gan.encoder, path+'A_encoded.png', set_domain_A)
     sample_images(gan.decoder, path+'B_encoded.png', set_domain_B)
     
-    #plotter.save_hist_image(gan.history, path+'History.png')
+    gan.save_history_to_image(path+'History.png')
     
-gan.train([set_domain_A, set_domain_B], epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False)    
+gan.train([set_domain_A, set_domain_B], epochs=20000, batch_size=64, checkpoint_callback = callback)    

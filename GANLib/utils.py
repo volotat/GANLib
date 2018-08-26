@@ -10,6 +10,9 @@ from keras import initializers, regularizers, constraints
 from keras.layers.convolutional import Conv2D
 from keras.legacy import interfaces
 
+import matplotlib.pyplot as plt
+
+
 def Gravity(x, boundaries = [0,1], pressure = 0.5):
     min = boundaries[0]
     max = boundaries[1]
@@ -89,3 +92,38 @@ class MiniBatchStddev(Layer): #again position of channels matter!
     
 def ident_loss(y_true, y_pred): 
     return y_pred
+    
+    
+# ---------------
+#  History
+# ---------------
+
+def save_hist_image(hist, file, graphs = ('metric', ['D loss', 'G loss'])):
+    hist_size = hist['hist_size']
+
+    plt.figure(figsize=(14,7))
+    plt.subplot(2, 1, 1)
+    plt.yscale('log')
+    plt.plot(hist['metric'][:hist_size,0], '-',linewidth=0.8, label="metric mean", color='C0')
+    plt.plot(hist['metric'][:hist_size,1], '-',linewidth=0.8, label="metric min", color='C0', alpha = 0.5)
+    plt.plot(hist['metric'][:hist_size,2], '-',linewidth=0.8, label="metric max", color='C0', alpha = 0.5)
+    plt.axhline(hist['best_metric'],linewidth=0.8)
+    plt.xlabel('Best result: %f'%hist['best_metric'])
+    plt.grid(True)
+
+    
+    plt.subplot(2, 1, 2)
+    cnt = 0
+    for i in range(len(hist)):
+        key = list(hist.keys())[i]
+        if isinstance(hist[key], np.ndarray) and key != 'metric':
+            plt.plot(hist[key][:hist_size,0], '-',linewidth=0.8, label=key, color='C'+str(cnt))
+            cnt += 1
+    
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
+    
+    plt.savefig(file, format='png')
+    plt.close()    

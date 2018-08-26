@@ -21,10 +21,6 @@ from .GAN import GAN
 #   Discriminator works in a bit different way that it described in the paper 
 #   simply because it shows better performance in my experiments.
 
-#       To do:
-#   Find a way how to split sets into train and test ones
-#   Define metric and make results of metric_test store in history
-
 
 class DiscoGAN(GAN):
     def __init__(self, input_shape, latent_dim = 100, **kwargs):
@@ -85,33 +81,15 @@ class DiscoGAN(GAN):
         # ---------------------
         #  Train decoder and encoder
         # ---------------------
-        self.combined.train_on_batch([domain_B_samples, domain_A_samples], self.valid)
+        
+        g_loss = self.combined.train_on_batch([domain_B_samples, domain_A_samples], self.valid)
 
-        d_loss = 0
         a_loss = self.combined_A.train_on_batch([domain_A_samples], [domain_A_samples])
         b_loss = self.combined_B.train_on_batch([domain_B_samples], [domain_B_samples])
-        g_loss = (a_loss + b_loss) / 2
+        self.m_loss = np.array([a_loss, b_loss])
         
         return d_loss, g_loss
         
     def test_network(self, batch_size):
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
-        
-        gen_lats = self.encoder.predict([imgs])
-        real_lats = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-    
-        gen_val = self.discriminator.predict([gen_lats])
-        train_val = self.discriminator.predict([real_lats])
-        
-        
-        if self.valid_set is not None: 
-            idx = np.random.randint(0, self.valid_set.shape[0], batch_size)
-            val_imgs = self.valid_set[idx]
-            val_gen_lats = self.encoder.predict([val_imgs])
-            test_val = self.discriminator.predict([val_gen_lats])
-        else:
-            test_val = np.zeros(batch_size)
-        
         metric = self.m_loss    
-        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
+        return {'metric': metric}

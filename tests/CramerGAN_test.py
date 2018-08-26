@@ -1,5 +1,4 @@
 from GANLib import CramerGAN
-from GANLib import plotter
 
 from keras.datasets import mnist, fashion_mnist, cifar10
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate
@@ -147,6 +146,6 @@ for i in range(len(tests['dataset'])):
     def callback():
         path = 'images/CramerGAN/'+tests['img_path'][i]+'/conv_'
         sample_images(gan.generator, path+'.png')
-        plotter.save_hist_image(gan.history, path+'_hist.png')
+        gan.save_history_to_image(path+'History.png')
         
     gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)
