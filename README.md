@@ -30,5 +30,5 @@ CGAN: completed
 CramerGAN: completed  
 GAN: completed  
 WGAP GP: completed  
-DiscoGAN: in progress  
+DiscoGAN: completed 
 
