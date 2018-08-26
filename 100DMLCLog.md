@@ -353,4 +353,4 @@
  
 **Today's progress** :  History collection mechanism significantly improved. Now it much more general and easier to manage.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/965b489064de976b444042b55b74f100aaba3a4d)
