@@ -360,4 +360,4 @@
  
 **Today's progress** :  Started implementing inception score as new metric.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a86ce534ddc948c99ab2569b1bc6bc5cd15ce266)
