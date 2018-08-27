@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 
 from . import metrics
-from . import plotter
 from . import utils
 
 from .GANs.AAE import AAE

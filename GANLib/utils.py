@@ -98,7 +98,7 @@ def ident_loss(y_true, y_pred):
 #  History
 # ---------------
 
-def save_hist_image(hist, file, graphs = ('metric', ['D loss', 'G loss'])):
+def save_hist_image(hist, file, graphs = (['metric'], ['D loss', 'G loss']), scales = ('log', 'linear')):
     hist_size = hist['hist_size']
 
     plt.figure(figsize=(14,7))

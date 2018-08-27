@@ -27,10 +27,10 @@ class GAN(object):
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
         gen_set = self.generator.predict([noise]) 
-        met_arr = metrics.magic_distance(org_set, gen_set)
+        met_arr = self.metric_func(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, optimizer = None):
+    def __init__(self, input_shape, latent_dim = 100, optimizer = None, metric = None):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
         
@@ -44,6 +44,9 @@ class GAN(object):
         
         self.optimizer = optimizer
         self.set_models_params()
+        
+        if metric is None: self.metric_func = metrics.magic_distance
+        else: self.metric_func = metric
         
         
     def set_models_params(self):
@@ -236,7 +239,7 @@ class GAN(object):
         
         return self.history   
 
-    def save_history_to_image(file):
+    def save_history_to_image(self, file):
         utils.save_hist_image(self.history, file, graphs = (['metric'], ['D loss', 'G loss']), scales = ('log', 'linear'))
         
    

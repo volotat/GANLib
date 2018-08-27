@@ -1,4 +1,4 @@
-from GANLib import WGAN_GP
+from GANLib import WGAN_GP, metrics
 
 from keras.datasets import mnist, fashion_mnist, cifar10
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate
@@ -126,6 +126,7 @@ def sample_images(gen, file):
     plt.close()
 
 for i in range(len(tests['dataset'])): 
+    i = 2
     model = tests['model'][i]  
 
     # Load the dataset
@@ -138,7 +139,7 @@ for i in range(len(tests['dataset'])):
         X_train = np.expand_dims(X_train, axis=3)
 
     #Run GAN for 20000 iterations
-    gan = WGAN_GP(X_train.shape[1:], noise_dim)
+    gan = WGAN_GP(X_train.shape[1:], noise_dim, metric = metrics.inception_score)
     gan.generator = model.build_generator(gan)
     gan.discriminator = model.build_discriminator(gan)
 
