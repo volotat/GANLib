@@ -130,10 +130,15 @@ for i in range(len(tests['dataset'])):
     model = tests['model'][i]  
 
     # Load the dataset
-    (X_train, _), (_, _) = tests['dataset'][i].load_data()
+    (dataseta, labelsa), (datasetb, labelsb) = tests['dataset'][i].load_data()
+    dataset = np.concatenate((dataseta,datasetb), axis = 0)
+    labels = np.concatenate((labelsa,labelsb), axis = 0)
+    
+    indx = np.where(labels == 8)[0] # we choose only one specific domain from the dataset
+    dataset = dataset[indx]
 
     # Configure input
-    X_train = (X_train.astype(np.float32) - 127.5) / 127.5
+    X_train = (dataset.astype(np.float32) - 127.5) / 127.5
 
     if len(X_train.shape)<4:
         X_train = np.expand_dims(X_train, axis=3)
