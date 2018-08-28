@@ -367,4 +367,4 @@
  
 **Today's progress** :  Inception score is now implemented and it looks like it works reasonably well.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d46949b851493db987fdf857be5480a4ce733385)
