@@ -368,3 +368,11 @@
 **Today's progress** :  Inception score is now implemented and it looks like it works reasonably well.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d46949b851493db987fdf857be5480a4ce733385)
+
+
+## Day 54 : August 29, 2018
+ 
+**Today's progress** :  Moving forward I decide to build Tensorflow implementation for each GAN meanwhile trying to remain library API.
+
+**Link to work:**  [Commit]()
+

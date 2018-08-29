@@ -1,6 +1,4 @@
-from keras.layers import Input
-from keras.models import Model
-from keras.optimizers import Adam
+import tensorflow as tf
 import numpy as np
 
 from .. import metrics
@@ -14,7 +12,7 @@ from .. import utils
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
 
-class GAN(object):
+class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
         
@@ -46,18 +44,19 @@ class GAN(object):
         
         
     def set_models_params(self):
-        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5)
+        if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002)
         
         self.models = ['generator', 'discriminator']
         self.loss = 'binary_crossentropy'
         self.disc_activation = 'sigmoid'
         
     def build_graph(self):
-        self.discriminator.compile(loss=self.loss, optimizer=self.optimizer)
+        '''
+        self.discriminator.compile(self.optimizer, loss=self.loss)
     
         # The generator takes noise and the target label as input
         # and generates the corresponding digit of that label
-        noise = Input(shape=(self.latent_dim,))
+        noise = tf.keras.Input(shape=(self.latent_dim,))
         img = self.generator([noise])
 
         # For the combined model we will only train the generator
@@ -69,11 +68,30 @@ class GAN(object):
 
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
-        self.combined = Model([noise], valid)
-        self.combined.compile(loss=self.loss, optimizer=self.optimizer)
+        self.combined = tf.keras.Model([noise], valid)
+        self.combined.compile(optimizer=self.optimizer, loss=self.loss)
         
         self.discriminator.trainable = True
+        '''
         
+        disc_vars = self.discriminator.trainable_weights
+        genr_vars = self.generator.trainable_weights
+        
+        self.disc_input = self.discriminator.inputs
+        self.genr_input = self.generator.inputs
+        
+        
+        disc_real = self.discriminator(self.disc_input)
+        disc_fake = self.discriminator(self.generator(self.genr_input))
+        
+        self.genr_loss = -tf.reduce_mean(tf.log(disc_fake))
+        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1. - disc_fake))
+        
+        self.train_genr = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.genr_loss, var_list=genr_vars)
+        self.train_disc = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.disc_loss, var_list=disc_vars)
+        
+        self.sess = tf.Session()
+        self.sess.run(tf.global_variables_initializer())
         
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
@@ -94,31 +112,16 @@ class GAN(object):
         
         
     def train_on_batch(self, batch_size):
+        
         # Select a random batch of images
         idx = np.random.randint(0, self.train_set.shape[0], batch_size)
         imgs = self.train_set[idx]
-    
-        # ---------------------
-        #  Train Discriminator
-        # ---------------------
-
+        
         # Sample noise as generator input
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        feed_dict = {self.disc_input[0].name: imgs, self.genr_input[0].name: noise}
 
-        # Generate new images
-        gen_imgs = self.generator.predict([noise])
-        
-        d_loss_real = self.discriminator.train_on_batch(imgs, self.valid)
-        d_loss_fake = self.discriminator.train_on_batch(gen_imgs, self.fake)
-        d_loss = (d_loss_real + d_loss_fake) / 2
-        
-        # ---------------------
-        #  Train Generator
-        # ---------------------
-        
-        # Train the generator
-        g_loss = self.combined.train_on_batch([noise], self.valid)
-        
+        _, _, d_loss, g_loss = self.sess.run([self.train_genr, self.train_disc, self.genr_loss, self.disc_loss], feed_dict=feed_dict)
         return d_loss, g_loss
         
         
