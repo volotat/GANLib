@@ -372,7 +372,7 @@
 
 ## Day 54 : August 29, 2018
  
-**Today's progress** :  Moving forward I decide to build Tensorflow implementation for each GAN meanwhile trying to remain library API.
+**Today's progress** :  Moving forward I decide to build Tensorflow implementation for each GAN meanwhile trying to remain API of the library.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/963bb9c1c8d8d490f46d55ab423b1c66fe87614e)
 
