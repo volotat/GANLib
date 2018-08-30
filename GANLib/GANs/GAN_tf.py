@@ -47,48 +47,45 @@ class GAN_tf(object):
         if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002)
         
         self.models = ['generator', 'discriminator']
-        self.loss = 'binary_crossentropy'
-        self.disc_activation = 'sigmoid'
+        #self.loss = 'binary_crossentropy'
+        #self.disc_activation = 'sigmoid'
         
     def build_graph(self):
-        '''
-        self.discriminator.compile(self.optimizer, loss=self.loss)
-    
-        # The generator takes noise and the target label as input
-        # and generates the corresponding digit of that label
-        noise = tf.keras.Input(shape=(self.latent_dim,))
-        img = self.generator([noise])
-
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
-
-        # The discriminator takes generated image as input and determines validity
-        # and the label of that image
-        valid = self.discriminator([img])
-
-        # The combined model  (stacked generator and discriminator)
-        # Trains generator to fool discriminator
-        self.combined = tf.keras.Model([noise], valid)
-        self.combined.compile(optimizer=self.optimizer, loss=self.loss)
         
-        self.discriminator.trainable = True
-        '''
+        def G(x):
+            with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
+                x = self.generator(x)
+            return x
+            
+        def D(x):
+            with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
+                x = self.discriminator(x)
+                x = tf.nn.sigmoid(x)
+            return x    
         
-        disc_vars = self.discriminator.trainable_weights
-        genr_vars = self.generator.trainable_weights
+        #disc_vars = self.discriminator.trainable_weights
+        #genr_vars = self.generator.trainable_weights
         
-        self.disc_input = self.discriminator.inputs
-        self.genr_input = self.generator.inputs
+        #self.disc_input = self.discriminator.inputs
+        #self.genr_input = self.generator.inputs
+        self.genr_input = tf.placeholder(tf.float32, shape=(None, 100), name = 'G_input')
+        self.disc_input = tf.placeholder(tf.float32, shape=(None, 28, 28, 1), name = 'D_input')
         
         
-        disc_real = self.discriminator(self.disc_input)
-        disc_fake = self.discriminator(self.generator(self.genr_input))
+        self.genr = G(self.genr_input)
+        disc_real = D(self.disc_input)
+        disc_fake = D(G(self.genr_input))
         
-        self.genr_loss = -tf.reduce_mean(tf.log(disc_fake))
-        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1. - disc_fake))
+        disc_vars = tf.trainable_variables('D')
+        genr_vars = tf.trainable_variables('G')
         
-        self.train_genr = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.genr_loss, var_list=genr_vars)
-        self.train_disc = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.disc_loss, var_list=disc_vars)
+        eps = 1e-2
+        self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
+        self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
+        
+        self.train_disc = tf.train.AdamOptimizer(0.0002).minimize(self.disc_loss, var_list=disc_vars)
+        self.train_genr = tf.train.AdamOptimizer(0.0002).minimize(self.genr_loss, var_list=genr_vars)
+        
         
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -102,14 +99,10 @@ class GAN_tf(object):
             self.train_set = data_set
             self.valid_set = None
     
-        # Adversarial ground truths
-        if hasattr(self, 'discriminator'):
-            #out_shape = self.discriminator.output_shape
-            #self.valid = np.ones((batch_size,) + out_shape[1:])
-            #self.fake = np.zeros((batch_size,) + out_shape[1:])
-            self.valid = np.ones((batch_size, 1))
-            self.fake = np.zeros((batch_size, 1))
-        
+    def predict(self, noise):  
+        feed_dict = {self.genr_input.name: noise}
+        imgs = self.sess.run(self.genr, feed_dict=feed_dict).reshape(noise.shape[0], 28,28, 1)
+        return imgs
         
     def train_on_batch(self, batch_size):
         
@@ -119,9 +112,10 @@ class GAN_tf(object):
         
         # Sample noise as generator input
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        feed_dict = {self.disc_input[0].name: imgs, self.genr_input[0].name: noise}
-
-        _, _, d_loss, g_loss = self.sess.run([self.train_genr, self.train_disc, self.genr_loss, self.disc_loss], feed_dict=feed_dict)
+        _, d_loss = self.sess.run([self.train_disc, self.disc_loss], feed_dict={self.disc_input.name: imgs, self.genr_input.name: noise})
+        
+        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        _, g_loss = self.sess.run([self.train_genr, self.genr_loss], feed_dict={self.genr_input.name: noise})
         return d_loss, g_loss
         
         
