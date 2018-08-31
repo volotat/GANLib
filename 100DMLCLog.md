@@ -388,5 +388,5 @@
  
 **Today's progress** :  Some experiments with Tensorflow version of GAN.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/98c503e22efc388a34fb9d2adf758d4c540473e2)
 
