@@ -377,10 +377,16 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/963bb9c1c8d8d490f46d55ab423b1c66fe87614e)
 
 
-
 ## Day 55 : August 30, 2018
  
 **Today's progress** :  Made Tensorflow implementation of GAN work. I will probably switch whole library to Tensorflow in the future as it seems like much more suitable for GAN related tasks.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/32c02ec39fca1d237293ca216dcd0a4049f057cd)
+
+
+## Day 56 : August 31, 2018
+ 
+**Today's progress** :  Some experiments with Tensorflow version of GAN.
+
+**Link to work:**  [Commit]()
 

@@ -1,6 +1,6 @@
 from GANLib import GAN_tf
 
-from keras.datasets import mnist, fashion_mnist, cifar10
+#from keras.datasets import mnist, fashion_mnist, cifar10
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -10,11 +10,11 @@ import tensorflow as tf
 def generator(x):
     layer = tf.keras.layers.Dense(256)(x)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
+    #layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
     
     layer = tf.keras.layers.Dense(784)(layer)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
+    #layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
     
     layer = tf.keras.layers.Reshape((7,7,16))(layer)
     
@@ -22,18 +22,21 @@ def generator(x):
     layer = tf.keras.layers.UpSampling2D(2)(layer)
     layer = tf.keras.layers.Conv2D(8, (3,3), padding='same')(layer)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer) #14x14x8
-    layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
+    #layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
     
     layer = tf.keras.layers.UpSampling2D(2)(layer)
     layer = tf.keras.layers.Conv2D(4, (3,3), padding='same')(layer)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer) #28x28x4
-    layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
+    #layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
     
-    img = tf.keras.layers.Conv2D(1, (1,1), padding='same')(layer)
+    layer = tf.keras.layers.Conv2D(1, (1,1), padding='same')(layer)
+    
+    img = layer #tf.tanh(layer)
     return img
 
 # D(x)
 def discriminator(x):
+    
     layer = tf.keras.layers.Conv2D(8, (3,3), strides = 2, padding='same')(x)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
     layer = tf.keras.layers.Conv2D(16, (3,3), strides = 2, padding='same')(layer)
@@ -42,6 +45,7 @@ def discriminator(x):
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
     layer = tf.keras.layers.Flatten()(layer)
     
+    layer = tf.keras.layers.Flatten()(layer)
     layer = tf.keras.layers.Dense(256)(layer)
     layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
     layer = tf.keras.layers.Dropout(0.5)(layer)
@@ -53,7 +57,7 @@ def discriminator(x):
 
     return validity
         
-tests = { 'dataset':  (mnist,         fashion_mnist, cifar10  ),
+tests = { 'dataset':  (tf.keras.datasets.mnist, tf.keras.datasets.fashion_mnist, tf.keras.datasets.cifar10),
           'img_path': ('mnist',       'fashion',     'cifar10')
           #'model':    (conv_model_28, conv_model_28, conv_model_32)
         }
@@ -98,15 +102,17 @@ for i in range(len(tests['dataset'])):
 
     if len(X_train.shape)<4:
         X_train = np.expand_dims(X_train, axis=3)
-
+    
     #Run GAN for 20000 iterations
     gan = GAN_tf(X_train.shape[1:], noise_dim)
+    
     gan.generator = generator
     gan.discriminator = discriminator
-
+   
     def callback():
         path = 'images/GAN/'+tests['img_path'][i]+'/tf_'
         sample_images(gan, path+'.png')
         #gan.save_history_to_image(path+'History.png')
-        
+      
     gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False)
+    

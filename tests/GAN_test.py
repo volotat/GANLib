@@ -163,6 +163,6 @@ for i in range(len(tests['dataset'])):
     def callback():
         path = 'images/GAN/'+tests['img_path'][i]+'/conv_'
         sample_images(gan.generator, path+'.png')
-        gan.save_history_to_image(path+'History.png')
+        #gan.save_history_to_image(path+'History.png')
         
     gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, validation_split = 0.1)

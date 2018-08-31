@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-from .. import metrics
-from .. import utils
+#from .. import metrics
+#from .. import utils
 
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
@@ -12,6 +12,7 @@ from .. import utils
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
 
+import matplotlib.pyplot as plt
 class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -33,14 +34,14 @@ class GAN_tf(object):
         
         self.history = None
         
-        self.epoch = utils.tensor_value(0)
-        self.epochs = utils.tensor_value(0)
+        #self.epoch = utils.tensor_value(0)
+        #self.epochs = utils.tensor_value(0)
         
         self.optimizer = optimizer
         self.set_models_params()
         
-        if metric is None: self.metric_func = metrics.magic_distance
-        else: self.metric_func = metric
+        #if metric is None: self.metric_func = metrics.magic_distance
+        #else: self.metric_func = metric
         
         
     def set_models_params(self):
@@ -53,39 +54,49 @@ class GAN_tf(object):
     def build_graph(self):
         
         def G(x):
-            with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
-                x = self.generator(x)
-            return x
+            with tf.variable_scope('Genr', reuse=tf.AUTO_REUSE) as scope:
+                res = self.generator(x)
+            return res
             
         def D(x):
-            with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
-                x = self.discriminator(x)
-                x = tf.nn.sigmoid(x)
-            return x    
+            with tf.variable_scope('Disc', reuse=tf.AUTO_REUSE) as scope:
+                logits = self.discriminator(x)
+                prob = tf.nn.sigmoid(logits)
+            return prob, logits
         
         #disc_vars = self.discriminator.trainable_weights
         #genr_vars = self.generator.trainable_weights
         
         #self.disc_input = self.discriminator.inputs
         #self.genr_input = self.generator.inputs
-        self.genr_input = tf.placeholder(tf.float32, shape=(None, 100), name = 'G_input')
-        self.disc_input = tf.placeholder(tf.float32, shape=(None, 28, 28, 1), name = 'D_input')
+        self.genr_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
+        self.disc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
         
         
         self.genr = G(self.genr_input)
-        disc_real = D(self.disc_input)
-        disc_fake = D(G(self.genr_input))
+        disc_real, disc_logit_real = D(self.disc_input)
+        disc_fake, disc_logit_fake = D(self.genr)
         
-        disc_vars = tf.trainable_variables('D')
-        genr_vars = tf.trainable_variables('G')
+        disc_vars = tf.trainable_variables('Disc')
+        genr_vars = tf.trainable_variables('Genr')
+
+        #eps = 1e-8
+        #self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
+        #self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
         
-        eps = 1e-2
-        self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
-        self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
+        disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_real, labels=tf.ones_like(disc_logit_real)))
+        disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_fake, labels=tf.zeros_like(disc_logit_fake)))
+        self.disc_loss = disc_loss_real + disc_loss_fake
+        self.genr_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_fake, labels=tf.ones_like(disc_logit_fake)))
+        '''
+        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1. - disc_fake))
+        self.genr_loss = -tf.reduce_mean(tf.log(disc_fake))
+        '''
         
-        self.train_disc = tf.train.AdamOptimizer(0.0002).minimize(self.disc_loss, var_list=disc_vars)
-        self.train_genr = tf.train.AdamOptimizer(0.0002).minimize(self.genr_loss, var_list=genr_vars)
         
+        self.train_genr = tf.train.AdamOptimizer(0.0001).minimize(self.genr_loss, var_list=genr_vars) 
+        self.train_disc = tf.train.AdamOptimizer(0.0001).minimize(self.disc_loss, var_list=disc_vars)
+       
         
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -100,8 +111,7 @@ class GAN_tf(object):
             self.valid_set = None
     
     def predict(self, noise):  
-        feed_dict = {self.genr_input.name: noise}
-        imgs = self.sess.run(self.genr, feed_dict=feed_dict).reshape(noise.shape[0], 28,28, 1)
+        imgs = self.sess.run(self.genr, feed_dict = {self.genr_input: noise})
         return imgs
         
     def train_on_batch(self, batch_size):
@@ -112,10 +122,10 @@ class GAN_tf(object):
         
         # Sample noise as generator input
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        _, d_loss = self.sess.run([self.train_disc, self.disc_loss], feed_dict={self.disc_input.name: imgs, self.genr_input.name: noise})
+        _, d_loss = self.sess.run([self.train_disc, self.disc_loss], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         
-        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        _, g_loss = self.sess.run([self.train_genr, self.genr_loss], feed_dict={self.genr_input.name: noise})
+        #noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        _, g_loss = self.sess.run([self.train_genr, self.genr_loss], feed_dict={self.genr_input: noise})
         return d_loss, g_loss
         
         
@@ -180,20 +190,20 @@ class GAN_tf(object):
         history = { 'best_metric':0,
                     'hist_size'  :0}
                     
-        self.epoch.set(0)
-        self.epochs.set(epochs)
+        #self.epoch.set(0)
+        #self.epochs.set(epochs)
         
         # Build Network
-       
+        
         self.prepare_data(data_set, validation_split, batch_size)
         self.build_models()
         
         # Train Network
         for epoch in range(epochs):
-            self.epoch.set(epoch)
+            #self.epoch.set(epoch)
             
             d_loss, g_loss = self.train_on_batch(batch_size)
-
+            
             # Save history
             if epoch % checkpoint_range == 0:
                 if not collect_history:
