@@ -393,7 +393,7 @@
 
 ## Day 57 : September 1, 2018
  
-**Today's progress** :  Finally achieve stability with Tensorflow version of GAN. There is still some work need to be done though with this module.
+**Today's progress** :  Finally achieve stability with Tensorflow version of GAN. There is still some work need to be done with this module though.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d7d16710f68384fb0ea019266c74e5ce1cbe51f0)
 
