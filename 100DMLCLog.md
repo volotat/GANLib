@@ -390,3 +390,10 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/98c503e22efc388a34fb9d2adf758d4c540473e2)
 
+
+## Day 57 : September 1, 2018
+ 
+**Today's progress** :  Finally achieve stability with Tensorflow version of GAN. There is still some work need to be done though with this module.
+
+**Link to work:**  [Commit]()
+

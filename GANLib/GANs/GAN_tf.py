@@ -43,6 +43,8 @@ class GAN_tf(object):
         #if metric is None: self.metric_func = metrics.magic_distance
         #else: self.metric_func = metric
         
+        self.sess = tf.Session()
+        
         
     def set_models_params(self):
         if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002)
@@ -54,12 +56,12 @@ class GAN_tf(object):
     def build_graph(self):
         
         def G(x):
-            with tf.variable_scope('Genr', reuse=tf.AUTO_REUSE) as scope:
+            with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
                 res = self.generator(x)
             return res
             
         def D(x):
-            with tf.variable_scope('Disc', reuse=tf.AUTO_REUSE) as scope:
+            with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
                 logits = self.discriminator(x)
                 prob = tf.nn.sigmoid(logits)
             return prob, logits
@@ -77,28 +79,17 @@ class GAN_tf(object):
         disc_real, disc_logit_real = D(self.disc_input)
         disc_fake, disc_logit_fake = D(self.genr)
         
-        disc_vars = tf.trainable_variables('Disc')
-        genr_vars = tf.trainable_variables('Genr')
-
-        #eps = 1e-8
-        #self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
-        #self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
+        disc_vars = tf.trainable_variables('D')
+        genr_vars = tf.trainable_variables('G')
         
-        disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_real, labels=tf.ones_like(disc_logit_real)))
-        disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_fake, labels=tf.zeros_like(disc_logit_fake)))
-        self.disc_loss = disc_loss_real + disc_loss_fake
-        self.genr_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=disc_logit_fake, labels=tf.ones_like(disc_logit_fake)))
-        '''
-        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1. - disc_fake))
-        self.genr_loss = -tf.reduce_mean(tf.log(disc_fake))
-        '''
+        eps = 1e-8
+        self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
+        self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
         
         
-        self.train_genr = tf.train.AdamOptimizer(0.0001).minimize(self.genr_loss, var_list=genr_vars) 
-        self.train_disc = tf.train.AdamOptimizer(0.0001).minimize(self.disc_loss, var_list=disc_vars)
+        self.train_genr = tf.train.AdamOptimizer(0.0002, 0.5).minimize(self.genr_loss, var_list=genr_vars) 
+        self.train_disc = tf.train.AdamOptimizer(0.0002, 0.5).minimize(self.disc_loss, var_list=disc_vars)
        
-        
-        self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
         
     def prepare_data(self, data_set, validation_split, batch_size):
@@ -124,7 +115,7 @@ class GAN_tf(object):
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
         _, d_loss = self.sess.run([self.train_disc, self.disc_loss], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         
-        #noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
         _, g_loss = self.sess.run([self.train_genr, self.genr_loss], feed_dict={self.genr_input: noise})
         return d_loss, g_loss
         
@@ -237,7 +228,7 @@ class GAN_tf(object):
         if save_best_model:
             self.generator.set_weights(self.best_model)    
             
-        self.epoch.set(epochs)
+        #self.epoch.set(epochs)
         checkpoint_callback()   
         
         return self.history   

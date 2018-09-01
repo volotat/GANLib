@@ -42,14 +42,7 @@ class conv_model_28():
         
     def build_discriminator(self):
         input_img = Input(shape=self.input_shape)
-
-        layer = Conv2D(8, (3,3), strides = 2, padding='same')(input_img)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        layer = Conv2D(16, (3,3), strides = 2, padding='same')(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        layer = Conv2D(32, (3,3), strides = 2, padding='same')(layer)
-        layer = LeakyReLU(alpha=0.2)(layer)
-        layer = Flatten()(layer)
+        layer = Flatten()(input_img)
         
         layer = Dense(256)(layer)
         layer = LeakyReLU(alpha=0.2)(layer)

@@ -6,54 +6,54 @@ import numpy as np
 
 import tensorflow as tf
 
+
+def upscale2d(x, factor=2):
+    assert isinstance(factor, int) and factor >= 1
+    if factor == 1: return x
+    with tf.variable_scope('Upscale2D'):
+        s = x.shape
+        x = tf.reshape(x, [-1, s[1], 1, s[2], 1, s[3]])
+        x = tf.tile(x, [1, 1, factor, 1, factor, 1])
+        x = tf.reshape(x, [-1, s[1] * factor, s[2] * factor, s[3]])
+        return x
+
 # G(z)
 def generator(x):
-    layer = tf.keras.layers.Dense(256)(x)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    #layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
+    layer = tf.layers.dense(x, 784)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer)
     
-    layer = tf.keras.layers.Dense(784)(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    #layer = tf.keras.layers.BatchNormalization(momentum=0.8)(layer)
+    layer = tf.layers.dense(layer, 784)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer)
     
-    layer = tf.keras.layers.Reshape((7,7,16))(layer)
+    layer = tf.reshape(layer,[-1,7,7,16])
     
-    #7 -> 14 -> 28
-    layer = tf.keras.layers.UpSampling2D(2)(layer)
-    layer = tf.keras.layers.Conv2D(8, (3,3), padding='same')(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer) #14x14x8
-    #layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
+    layer = upscale2d(layer)
+    layer = tf.layers.conv2d(layer, 8, (3,3), padding='same')
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.batch_normalization(layer)
     
-    layer = tf.keras.layers.UpSampling2D(2)(layer)
-    layer = tf.keras.layers.Conv2D(4, (3,3), padding='same')(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer) #28x28x4
-    #layer = tf.keras.layers.BatchNormalization(momentum=0.8, axis = -1)(layer)
+    layer = upscale2d(layer)
+    layer = tf.layers.conv2d(layer, 4, (3,3), padding='same')
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.batch_normalization(layer)
     
-    layer = tf.keras.layers.Conv2D(1, (1,1), padding='same')(layer)
-    
-    img = layer #tf.tanh(layer)
+    layer = tf.layers.conv2d(layer, 1, (1,1), padding='same')
+    img = layer
     return img
 
 # D(x)
 def discriminator(x):
+    layer = x
     
-    layer = tf.keras.layers.Conv2D(8, (3,3), strides = 2, padding='same')(x)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.Conv2D(16, (3,3), strides = 2, padding='same')(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.Conv2D(32, (3,3), strides = 2, padding='same')(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.Flatten()(layer)
+    layer = tf.layers.flatten(layer)
+    layer = tf.layers.dense(layer,256)
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.dense(layer,128)
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    layer = tf.keras.layers.Flatten()(layer)
-    layer = tf.keras.layers.Dense(256)(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.Dropout(0.5)(layer)
-    layer = tf.keras.layers.Dense(128)(layer)
-    layer = tf.keras.layers.LeakyReLU(alpha=0.2)(layer)
-    layer = tf.keras.layers.Dropout(0.5)(layer)
-    
-    validity = tf.keras.layers.Dense(1)(layer)
+    validity = tf.layers.dense(layer,1)
 
     return validity
         
