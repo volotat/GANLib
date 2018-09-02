@@ -402,4 +402,4 @@
  
 **Today's progress** :  Tensorflow version of GAN collect history now. For some reason it performs a bit worse that Keras implementation but trains faster.
 
-**Link to work:**  [Commit]()
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/23e0431a8fe5072ed719f826c12626c2bb56bdbc)
