@@ -397,3 +397,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/d7d16710f68384fb0ea019266c74e5ce1cbe51f0)
 
+
+## Day 58 : September 2, 2018
+ 
+**Today's progress** :  Tensorflow version of GAN collect history now. For some reason it performs a bit worse that Keras implementation but trains faster.
+
+**Link to work:**  [Commit]()

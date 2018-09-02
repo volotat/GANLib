@@ -19,25 +19,25 @@ def upscale2d(x, factor=2):
 
 # G(z)
 def generator(x):
-    layer = tf.layers.dense(x, 784)
+    layer = tf.layers.dense(x, 256)
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
-    layer = tf.layers.batch_normalization(layer)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = tf.layers.dense(layer, 784)
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
-    layer = tf.layers.batch_normalization(layer)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = tf.reshape(layer,[-1,7,7,16])
     
     layer = upscale2d(layer)
     layer = tf.layers.conv2d(layer, 8, (3,3), padding='same')
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
-    layer = tf.layers.batch_normalization(layer)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = upscale2d(layer)
     layer = tf.layers.conv2d(layer, 4, (3,3), padding='same')
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
-    layer = tf.layers.batch_normalization(layer)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = tf.layers.conv2d(layer, 1, (1,1), padding='same')
     img = layer
@@ -57,9 +57,8 @@ def discriminator(x):
 
     return validity
         
-tests = { 'dataset':  (tf.keras.datasets.mnist, tf.keras.datasets.fashion_mnist, tf.keras.datasets.cifar10),
-          'img_path': ('mnist',       'fashion',     'cifar10')
-          #'model':    (conv_model_28, conv_model_28, conv_model_32)
+tests = { 'dataset':  (tf.keras.datasets.mnist, tf.keras.datasets.fashion_mnist),
+          'img_path': ('mnist', 'fashion')
         }
         
         
@@ -112,7 +111,7 @@ for i in range(len(tests['dataset'])):
     def callback():
         path = 'images/GAN/'+tests['img_path'][i]+'/tf_'
         sample_images(gan, path+'.png')
-        #gan.save_history_to_image(path+'History.png')
+        gan.save_history_to_image(path+'History.png')
       
-    gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False)
+    gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback)
     

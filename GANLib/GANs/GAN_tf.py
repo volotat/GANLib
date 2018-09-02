@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-#from .. import metrics
-#from .. import utils
+from .. import metrics
+from .. import utils
 
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
@@ -12,7 +12,6 @@ import numpy as np
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
 
-import matplotlib.pyplot as plt
 class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -21,7 +20,7 @@ class GAN_tf(object):
         org_set = set[n_indx]
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
-        gen_set = self.generator.predict([noise]) 
+        gen_set = self.predict(noise) 
         met_arr = self.metric_func(org_set, gen_set)
         return met_arr
 
@@ -40,18 +39,16 @@ class GAN_tf(object):
         self.optimizer = optimizer
         self.set_models_params()
         
-        #if metric is None: self.metric_func = metrics.magic_distance
-        #else: self.metric_func = metric
+        if metric is None: self.metric_func = metrics.magic_distance
+        else: self.metric_func = metric
         
         self.sess = tf.Session()
         
         
     def set_models_params(self):
-        if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002)
+        if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.001, 0.5, epsilon = 1e-07)
         
         self.models = ['generator', 'discriminator']
-        #self.loss = 'binary_crossentropy'
-        #self.disc_activation = 'sigmoid'
         
     def build_graph(self):
         
@@ -66,11 +63,6 @@ class GAN_tf(object):
                 prob = tf.nn.sigmoid(logits)
             return prob, logits
         
-        #disc_vars = self.discriminator.trainable_weights
-        #genr_vars = self.generator.trainable_weights
-        
-        #self.disc_input = self.discriminator.inputs
-        #self.genr_input = self.generator.inputs
         self.genr_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
         self.disc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
         
@@ -81,14 +73,21 @@ class GAN_tf(object):
         
         disc_vars = tf.trainable_variables('D')
         genr_vars = tf.trainable_variables('G')
+        '''
+        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1 - disc_fake))
+        self.genr_loss = tf.reduce_mean(1 - tf.log(disc_fake))
+        '''
+        def sigmoid_cross_entropy_with_logits(x, y):
+            return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, labels=y)
         
-        eps = 1e-8
-        self.disc_loss = tf.reduce_mean(-tf.log(disc_real + eps) - tf.log(1 - disc_fake + eps))
-        self.genr_loss = tf.reduce_mean(-tf.log(disc_fake + eps))
+        self.d_loss_real = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_real, tf.ones_like(disc_logit_real)))
+        self.d_loss_fake = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_fake, tf.zeros_like(disc_logit_fake)))
+        self.disc_loss = (self.d_loss_real + self.d_loss_fake) / 2.
         
+        self.genr_loss = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_fake, tf.ones_like(disc_logit_fake)))
         
-        self.train_genr = tf.train.AdamOptimizer(0.0002, 0.5).minimize(self.genr_loss, var_list=genr_vars) 
-        self.train_disc = tf.train.AdamOptimizer(0.0002, 0.5).minimize(self.disc_loss, var_list=disc_vars)
+        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=genr_vars) 
+        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=disc_vars)
        
         self.sess.run(tf.global_variables_initializer())
         
@@ -128,22 +127,8 @@ class GAN_tf(object):
       
       
     def test_network(self, batch_size):
-        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        gen_imgs = self.generator.predict([noise])
-        gen_val = self.discriminator.predict([gen_imgs])
-        
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
-        train_val = self.discriminator.predict([imgs])
-        
-        if self.valid_set is not None: 
-            idx = np.random.randint(0, self.valid_set.shape[0], batch_size)
-            test_val = self.discriminator.predict(self.valid_set[idx])
-        else:
-            test_val = np.zeros(batch_size)
-        
         metric = self.metric_test(self.train_set, batch_size)    
-        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
+        return {'metric': metric}
         
     
     def train(self, data_set, batch_size=32, epochs=1, verbose=True, checkpoint_range = 100, checkpoint_callback = None, validation_split = 0, save_best_model = False, collect_history = True):
