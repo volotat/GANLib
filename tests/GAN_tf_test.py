@@ -1,6 +1,5 @@
 from GANLib import GAN_tf
 
-#from keras.datasets import mnist, fashion_mnist, cifar10
 import matplotlib.pyplot as plt
 import numpy as np
 

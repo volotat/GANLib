@@ -25,7 +25,9 @@ from skimage.measure import block_reduce
 #   Takes as input some dataset and trains the network as usual GAN but progressively 
 #   adding layers to generator and discriminator.
 
-
+#       Note:
+#   This implementation of PG GAN trains much faster than original, but support only 
+#   constant amount of filters for all convolution layers.
 
 #-------------------------------
 # Auxiliary functions
@@ -56,42 +58,42 @@ def dynamic_he_scale(x, gain = np.sqrt(2)):
     return x_scale
    
 class Conv2D_sw(Conv2D): #Conv2D layer with dynamically scaled weights
-    def __init__(gan, filters, kernel_size, **kwargs):
-        super(Conv2D_sw, gan).__init__(
+    def __init__(self, filters, kernel_size, **kwargs):
+        super(Conv2D_sw, self).__init__(
             filters=filters,
             kernel_size=kernel_size,
             **kwargs)
        
-    def call(gan, inputs):
+    def call(self, inputs):
         outputs = K.conv2d(
                 inputs,
-                weights_scale_func(gan.kernel),
-                strides=gan.strides,
-                padding=gan.padding,
-                data_format=gan.data_format,
-                dilation_rate=gan.dilation_rate)
+                weights_scale_func(self.kernel),
+                strides=self.strides,
+                padding=self.padding,
+                data_format=self.data_format,
+                dilation_rate=self.dilation_rate)
         
-        if gan.use_bias:
+        if self.use_bias:
             outputs = K.bias_add(
                 outputs,
-                gan.bias,
-                data_format=gan.data_format)
+                self.bias,
+                data_format=self.data_format)
                 
-        if gan.activation is not None:
-            return gan.activation(outputs)
+        if self.activation is not None:
+            return self.activation(outputs)
             
         return outputs
 
 class Dense_sw(Dense): #Dense layer with dynamically scaled weights
-    def __init__(gan, units, **kwargs):
-        super(Dense_sw, gan).__init__(units = units, **kwargs)
+    def __init__(self, units, **kwargs):
+        super(Dense_sw, self).__init__(units = units, **kwargs)
        
-    def call(gan, inputs):
-        output = K.dot(inputs, weights_scale_func(gan.kernel))
-        if gan.use_bias:
-            output = K.bias_add(output, gan.bias, data_format='channels_last')
-        if gan.activation is not None:
-            output = gan.activation(output)
+    def call(self, inputs):
+        output = K.dot(inputs, weights_scale_func(self.kernel))
+        if self.use_bias:
+            output = K.bias_add(output, self.bias, data_format='channels_last')
+        if self.activation is not None:
+            output = self.activation(output)
         return output
      
            
@@ -102,6 +104,7 @@ class Dense_sw(Dense): #Dense layer with dynamically scaled weights
 initialization = 'he_normal' #keras.initializers.RandomNormal(0, 1)  
 weights_scale_func = dynamic_he_scale
 
+filters = 64
 noise_dim = 64 
 channels = 3
 
@@ -118,53 +121,51 @@ def new_sheet(filters, kernel_size, padding, name, pix_norm = True):
         return layer
     return func
     
-def transition_alpha(gan):
-    return K.minimum(gan.epoch.tensor / (gan.epochs.tensor/2), 1) 
+def transition_alpha(self):
+    return K.minimum(self.epoch.tensor / (self.epochs.tensor/2), 1) 
    
-def build_generator(gan):
+def build_generator(self):
     previous_step = None
     next_step = None
 
-    input_layer = Input(shape=(gan.latent_dim,))
+    input_layer = Input(shape=(self.latent_dim,))
     layer = RepeatVector(16)(input_layer)
-    layer = Reshape((4, 4, gan.latent_dim))(layer)
+    layer = Reshape((4, 4, self.latent_dim))(layer)
     
-    layer = new_sheet(filters_list[0], (4,4), 'same', 'genr_head_a')(layer)
-    layer = new_sheet(filters_list[0], (3,3), 'same', 'genr_head_b')(layer)
+    layer = new_sheet(filters, (4,4), 'same', 'genr_head_0')(layer)
+    layer = new_sheet(filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
     for i in range(sheets):
         layer = UpSampling2D(2)(layer)
         if i == sheets-1: previous_step = layer
             
-        layer = new_sheet(filters_list[i], (3,3), 'same', 'genr_layer_a'+str(i))(layer)
-        layer = new_sheet(filters_list[i], (3,3), 'same', 'genr_layer_b'+str(i))(layer)
+        layer = new_sheet(filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
-    next_step = Conv2D_sw(channels, (1,1), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
+    next_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
     
     #smooth fading
     if previous_step is not None: 
         previous_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None))(previous_step) 
-        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(gan))([previous_step, next_step])
+        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
     else:
         layer = next_step
       
     return Model(input_layer, layer)
-      
-def build_discriminator(gan):
+    
+def build_discriminator(self):
     previous_step = None
     next_step = None
     
-    input_layer = Input(shape=gan.input_shape)
+    input_layer = Input(shape=self.input_shape)
     
-    layer = Conv2D_sw(filters_list[sheets], (1,1), name = 'from_rgb', kernel_initializer = initialization)(input_layer) #from RGB
+    layer = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = initialization)(input_layer) #from RGB
     layer = LeakyReLU(alpha=0.2)(layer) 
     layer = utils.PixelNorm()(layer)
     
     #Growing layers
     for i in range(sheets, 0, -1):
-        layer = new_sheet(filters_list[i], (3,3), 'same', 'disc_layer_b'+str(i))(layer)
-        layer = new_sheet(filters_list[i - 1], (3,3), 'same', 'disc_layer_a'+str(i))(layer)
+        layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
         layer = AveragePooling2D(2)(layer)
 
         #smooth fading
@@ -172,19 +173,19 @@ def build_discriminator(gan):
             next_step = layer
             
             previous_step = AveragePooling2D(2)(input_layer)
-            previous_step = Conv2D_sw(filters_list[i - 1], (1,1), weights = weights.get('from_rgb',None))(previous_step) #from RGB
+            previous_step = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None))(previous_step) #from RGB
             previous_step = LeakyReLU(alpha=0.2)(previous_step) 
             previous_step = utils.PixelNorm()(previous_step)
         
-            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(gan))([previous_step, next_step])
+            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
                 
     
     layer = utils.MiniBatchStddev(group_size=4)(layer)
-    layer = new_sheet(filters_list[0], (3,3), 'same', 'disc_head_0')(layer)
-    layer = new_sheet(filters_list[0], (4,4), 'valid', 'disc_head_1')(layer)
+    layer = new_sheet(filters, (3,3), 'same', 'disc_head_0')(layer)
+    layer = new_sheet(filters, (4,4), 'valid', 'disc_head_1')(layer)
     
     layer = Flatten()(layer)
-    layer = Dense_sw(1, activation=gan.disc_activation, kernel_initializer = initialization)(layer)
+    layer = Dense_sw(1, activation=self.disc_activation, kernel_initializer = initialization)(layer)
 
     return Model(input_layer, layer)
     
@@ -236,8 +237,6 @@ dataset = augment(dataset)
 epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
-filters_list = [48, 32, 24, 16]
-
 
 for i in range(len(epochs_list)):    
     epochs = epochs_list[i]
