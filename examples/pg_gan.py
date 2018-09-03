@@ -137,8 +137,8 @@ def build_generator(gan):
         layer = UpSampling2D(2)(layer)
         if i == sheets-1: previous_step = layer
             
-        layer = new_sheet(filters_list[i], (3,3), 'same', 'genr_layer_a'+str(i))(layer)
-        layer = new_sheet(filters_list[i], (3,3), 'same', 'genr_layer_b'+str(i))(layer)
+        layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_a'+str(i))(layer)
+        layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_b'+str(i))(layer)
    
     next_step = Conv2D_sw(channels, (1,1), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
     
