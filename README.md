@@ -1,5 +1,5 @@
 # GANLib
-Tensorflow based GAN library.
+Tensorflow based GANs library
 
 ### Dependencies
 Tensorflow 1.10.1  
