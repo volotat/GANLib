@@ -403,3 +403,10 @@
 **Today's progress** :  Tensorflow version of GAN collect history now. For some reason it performs a bit worse that Keras implementation but trains faster.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/23e0431a8fe5072ed719f826c12626c2bb56bdbc)
+
+
+## Day 59 : September 3, 2018
+ 
+**Today's progress** :  Small improvements in PG GAN example. Tensorflow version of GAN deleted from main branch and moved to new one.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/aa5a1d8fb9daf432885478801ca5a727900c5d84)
