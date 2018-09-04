@@ -1,4 +1,4 @@
-from GANLib import GAN_tf
+from GANLib import GAN_tf, distances
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -56,12 +56,12 @@ def discriminator(x):
 
     return validity
         
-tests = { 'dataset':  (tf.keras.datasets.mnist, tf.keras.datasets.fashion_mnist),
-          'img_path': ('mnist', 'fashion')
+mnist = tf.keras.datasets.mnist    
+tests = { 'dataset':  (mnist, mnist, mnist),
+          'img_name': ('mnist_wasserstein_gp','mnist_minmax', 'mnist_cross_entropy'),
+          'distance': (distances.wasserstein_gp, distances.minmax, distances.cross_entropy)
         }
         
-        
-      
 noise_dim = 100    
 
 def sample_images(gen, file):
@@ -89,9 +89,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(len(tests['dataset'])): 
-    #model = tests['model'][i]  
-
+for i in range(1): # len(tests['dataset'])
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 
@@ -102,15 +100,15 @@ for i in range(len(tests['dataset'])):
         X_train = np.expand_dims(X_train, axis=3)
     
     #Run GAN for 20000 iterations
-    gan = GAN_tf(X_train.shape[1:], noise_dim)
+    gan = GAN_tf(X_train.shape[1:], noise_dim, distance = tests['distance'][i])
     
     gan.generator = generator
     gan.discriminator = discriminator
    
     def callback():
-        path = 'images/GAN/'+tests['img_path'][i]+'/tf_'
+        path = 'images/GAN/tf_'+tests['img_name'][i]
         sample_images(gan, path+'.png')
-        gan.save_history_to_image(path+'History.png')
+        gan.save_history_to_image(path+'_history.png')
       
-    gan.train(X_train, epochs=20000, batch_size=64, checkpoint_callback = callback)
+    gan.train(X_train, epochs=5000, batch_size=64, checkpoint_callback = callback)
     

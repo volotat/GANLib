@@ -3,6 +3,7 @@ import numpy as np
 
 from .. import metrics
 from .. import utils
+from .. import distances
 
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
@@ -18,6 +19,10 @@ from .. import utils
 #   Make it possible to pass list of data arrays to any GAN and possible use it as labels, references and so on.
 #   Rename module
 
+# Distances:
+# Wasserstein
+# Cramer
+
 class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -30,12 +35,12 @@ class GAN_tf(object):
         met_arr = self.metric_func(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, optimizer = None, metric = None):
+    def __init__(self, input_shape, latent_dim = 100, optimizer = None, distance = None, metric = None):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
         
         self.best_model = None
-        self.best_metric = 0
+        self.best_metric = np.inf
         
         self.history = None
         
@@ -43,6 +48,8 @@ class GAN_tf(object):
         #self.epochs = utils.tensor_value(0)
         
         self.optimizer = optimizer
+        self.distance = distance
+        
         self.set_models_params()
         
         if metric is None: self.metric_func = metrics.magic_distance
@@ -53,6 +60,7 @@ class GAN_tf(object):
         
     def set_models_params(self):
         if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.001, 0.5, epsilon = 1e-07)
+        if self.distance is None: self.distance = distances.minmax
         
         self.models = ['generator', 'discriminator']
         
@@ -66,32 +74,23 @@ class GAN_tf(object):
         def D(x):
             with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
                 logits = self.discriminator(x)
-                prob = tf.nn.sigmoid(logits)
-            return prob, logits
+            return logits
         
         self.genr_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
         self.disc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
         
         
         self.genr = G(self.genr_input)
-        disc_real, disc_logit_real = D(self.disc_input)
-        disc_fake, disc_logit_fake = D(self.genr)
+        logit_real = D(self.disc_input)
+        logit_fake = D(self.genr)
+        
+        real = self.disc_input
+        fake = self.genr
+        
+        self.disc_loss, self.genr_loss = self.distance(logit_real, logit_fake, real, fake, G, D)
         
         disc_vars = tf.trainable_variables('D')
         genr_vars = tf.trainable_variables('G')
-        '''
-        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1 - disc_fake))
-        self.genr_loss = tf.reduce_mean(1 - tf.log(disc_fake))
-        '''
-        def sigmoid_cross_entropy_with_logits(x, y):
-            return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, labels=y)
-        
-        self.d_loss_real = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_real, tf.ones_like(disc_logit_real)))
-        self.d_loss_fake = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_fake, tf.zeros_like(disc_logit_fake)))
-        self.disc_loss = (self.d_loss_real + self.d_loss_fake) / 2.
-        
-        self.genr_loss = tf.reduce_mean(sigmoid_cross_entropy_with_logits(disc_logit_fake, tf.ones_like(disc_logit_fake)))
-        
         self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=genr_vars) 
         self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=disc_vars)
        
@@ -206,7 +205,7 @@ class GAN_tf(object):
                     
                     if verbose: print ("%d [D loss: %f] [G loss: %f] [%s: %f]" % (epoch, d_loss, g_loss, 'metric', metric))
                     
-                    if metric*0.98 < self.best_metric or self.best_model == None:
+                    if metric < self.best_metric:  #or self.best_model == None:
                         #self.best_model = self.generator.get_weights()
                         self.best_metric = metric
                         history['best_metric'] = self.best_metric
@@ -222,6 +221,8 @@ class GAN_tf(object):
         #self.epoch.set(epochs)
         checkpoint_callback()   
         
+        self.sess.close()
+        tf.reset_default_graph()
         return self.history   
 
     def save_history_to_image(self, file):

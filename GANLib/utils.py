@@ -1,18 +1,9 @@
-import keras
-from keras import backend as K
-from keras.engine.topology import Layer
 import numpy as np
 import tensorflow as tf
 
-from keras.engine import InputSpec, Layer
-from keras import initializers, regularizers, constraints
-
-from keras.layers.convolutional import Conv2D
-from keras.legacy import interfaces
-
 import matplotlib.pyplot as plt
 
-
+'''
 def Gravity(x, boundaries = [0,1], pressure = 0.5):
     min = boundaries[0]
     max = boundaries[1]
@@ -82,17 +73,7 @@ class MiniBatchStddev(Layer): #again position of channels matter!
         
     def compute_output_shape(self, input_shape):
         return (*input_shape[:3], input_shape[3]+1)        
-          
-          
-          
-          
-# ---------------
-#  Losses
-# ---------------
-    
-def ident_loss(y_true, y_pred): 
-    return y_pred
-    
+'''          
     
 # ---------------
 #  History
