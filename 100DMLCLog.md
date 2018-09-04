@@ -410,3 +410,10 @@
 **Today's progress** :  Small improvements in PG GAN example. Tensorflow version of GAN deleted from main branch and moved to new one.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/aa5a1d8fb9daf432885478801ca5a727900c5d84)
+
+
+## Day 60 : September 4, 2018
+ 
+**Today's progress** :  All optimization distances are now options on GAN initiation stage. So we don't have to have many different modules for different types of GANs if main structure is the same.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5daa0753c5cb9e694c6c081695f820415b3b6257)
