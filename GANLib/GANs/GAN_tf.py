@@ -12,6 +12,12 @@ from .. import utils
 #   networks (generator and discriminator) learn to generate samples 
 #   that very similar to given dataset from random noise.
 
+
+#       To do:
+#   Make it possible to choose on witch type of losses (WGAN/ WGAN GP/ Cramer/ Vanilla) it will be trained on
+#   Make it possible to pass list of data arrays to any GAN and possible use it as labels, references and so on.
+#   Rename module
+
 class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
