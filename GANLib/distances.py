@@ -21,7 +21,8 @@ def gradient_penalty(real, fake, discriminator, lambda_scale = 10.):
 # Optimization Distances
 # ---------------     
 
-def minmax(logit_real, logit_fake, real, fake, G, D): #losses from the original paper: https://arxiv.org/pdf/1406.2661.pdf
+def minmax(logit_real, logit_fake, real, fake, G, D): 
+    #losses from the original paper: https://arxiv.org/pdf/1406.2661.pdf
     eps = 1e-7
     disc_real = tf.maximum(tf.nn.sigmoid(logit_real), eps)
     disc_fake = tf.maximum(tf.nn.sigmoid(logit_fake), eps)
@@ -30,7 +31,8 @@ def minmax(logit_real, logit_fake, real, fake, G, D): #losses from the original 
     genr_loss = tf.reduce_mean(1 - tf.log(disc_fake))
     return disc_loss, genr_loss
           
-def cross_entropy(logit_real, logit_fake, real, fake, G, D): #practically the same losses as original but written in a different way
+def cross_entropy(logit_real, logit_fake, real, fake, G, D): 
+    #practically the same losses as original but written in a different way
     d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_real, labels=tf.ones_like(logit_real)))
     d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=tf.zeros_like(logit_fake)))
     disc_loss = (d_loss_real + d_loss_fake) / 2.
@@ -38,7 +40,8 @@ def cross_entropy(logit_real, logit_fake, real, fake, G, D): #practically the sa
     genr_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=tf.ones_like(logit_fake)))
     return disc_loss, genr_loss
            
-def wasserstein_gp(logit_real, logit_fake, real, fake, G, D): #losses from "Improved Training of Wasserstein GANs" :https://arxiv.org/pdf/1704.00028.pdf
+def wasserstein_gp(logit_real, logit_fake, real, fake, G, D): 
+    #losses from "Improved Training of Wasserstein GANs" :https://arxiv.org/pdf/1704.00028.pdf
     gp = gradient_penalty(real, fake, D)
     
     disc_loss = tf.reduce_mean(logit_fake) - tf.reduce_mean(logit_real) + gp
