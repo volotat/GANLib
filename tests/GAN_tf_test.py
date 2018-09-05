@@ -57,9 +57,9 @@ def discriminator(x):
     return validity
         
 mnist = tf.keras.datasets.mnist    
-tests = { 'dataset':  (mnist, mnist, mnist),
-          'img_name': ('mnist_wasserstein_gp','mnist_minmax', 'mnist_cross_entropy'),
-          'distance': (distances.wasserstein_gp, distances.minmax, distances.cross_entropy)
+tests = { 'dataset':  (mnist, mnist, mnist, mnist),
+          'img_name': ('mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', ),
+          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, )
         }
         
 noise_dim = 100    
@@ -89,7 +89,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(1): # len(tests['dataset'])
+for i in range(2): # len(tests['dataset'])
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 
@@ -100,7 +100,7 @@ for i in range(1): # len(tests['dataset'])
         X_train = np.expand_dims(X_train, axis=3)
     
     #Run GAN for 20000 iterations
-    gan = GAN_tf(X_train.shape[1:], noise_dim, distance = tests['distance'][i])
+    gan = GAN_tf(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
     gan.discriminator = discriminator

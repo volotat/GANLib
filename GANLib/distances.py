@@ -21,30 +21,117 @@ def gradient_penalty(real, fake, discriminator, lambda_scale = 10.):
 # Optimization Distances
 # ---------------     
 
-def minmax(logit_real, logit_fake, real, fake, G, D): 
-    #losses from the original paper: https://arxiv.org/pdf/1406.2661.pdf
-    eps = 1e-7
-    disc_real = tf.maximum(tf.nn.sigmoid(logit_real), eps)
-    disc_fake = tf.maximum(tf.nn.sigmoid(logit_fake), eps)
+class distance(object):
+    def __init__(self, optimizer = None, logits = [None, None], examples = [None, None], models = [None, None], vars = [None, None]):
+        self.optimizer = optimizer
+        
+        self.logit_real = logits[0]
+        self.logit_fake = logits[1]
+        
+        self.real = examples[0]
+        self.fake = examples[1]
+        
+        self.G = models[0]
+        self.D = models[1]
+        
+        self.genr_vars = vars[0]
+        self.disc_vars = vars[1]
     
-    disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1 - disc_fake))
-    genr_loss = tf.reduce_mean(1 - tf.log(disc_fake))
-    return disc_loss, genr_loss
-          
-def cross_entropy(logit_real, logit_fake, real, fake, G, D): 
-    #practically the same losses as original but written in a different way
-    d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_real, labels=tf.ones_like(logit_real)))
-    d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=tf.zeros_like(logit_fake)))
-    disc_loss = (d_loss_real + d_loss_fake) / 2.
+    def get_train_sessions(self):
+        pass
     
-    genr_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=tf.ones_like(logit_fake)))
-    return disc_loss, genr_loss
-           
-def wasserstein_gp(logit_real, logit_fake, real, fake, G, D): 
-    #losses from "Improved Training of Wasserstein GANs" :https://arxiv.org/pdf/1704.00028.pdf
-    gp = gradient_penalty(real, fake, D)
+    def get_losses(self):
+        pass
+
+
+# losses from the original paper: https://arxiv.org/pdf/1406.2661.pdf        
+class minmax(distance):
+    def __init__(self, **kwargs):
+        super(minmax, self).__init__(**kwargs)
+        
+        eps = 1e-7
+        disc_real = tf.maximum(tf.nn.sigmoid(self.logit_real), eps)
+        disc_fake = tf.maximum(tf.nn.sigmoid(self.logit_fake), eps)
+        
+        self.disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1 - disc_fake))
+        self.genr_loss = tf.reduce_mean(1 - tf.log(disc_fake))
+        
+        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=self.genr_vars) 
+        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=self.disc_vars)
+
+    def get_train_sessions(self):
+        return self.train_genr, self.train_disc
     
-    disc_loss = tf.reduce_mean(logit_fake) - tf.reduce_mean(logit_real) + gp
-    genr_loss = -tf.reduce_mean(logit_fake)  
-      
-    return disc_loss, genr_loss   
+    def get_losses(self):
+        return self.genr_loss, self.disc_loss
+
+# practically the same losses as original but written in a different way
+class cross_entropy(distance):
+    def __init__(self, **kwargs):
+        super(cross_entropy, self).__init__(**kwargs)        
+        
+        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logit_real, labels=tf.ones_like(self.logit_real)))
+        d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logit_fake, labels=tf.zeros_like(self.logit_fake)))
+        self.disc_loss = (d_loss_real + d_loss_fake) / 2.
+        
+        self.genr_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logit_fake, labels=tf.ones_like(vlogit_fake)))
+        
+        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=self.genr_vars) 
+        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=self.disc_vars)
+        
+    def get_train_sessions(self):
+        return self.train_genr, self.train_disc
+    
+    def get_losses(self):
+        return self.genr_loss, self.disc_loss
+        
+        
+# losses from "Wasserstein GAN" :https://arxiv.org/pdf/1701.07875.pdf        
+class wasserstein(distance):
+    def __init__(self, **kwargs):
+        super(wasserstein, self).__init__(**kwargs)
+        
+        self.disc_loss = tf.reduce_mean(self.logit_fake) - tf.reduce_mean(self.logit_real)
+        self.genr_loss = -tf.reduce_mean(self.logit_fake)  
+        
+        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=self.genr_vars) 
+        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=self.disc_vars)
+        
+        self.disc_clip = [v.assign(tf.clip_by_value(v, -0.01, 0.01)) for v in self.disc_vars]
+    
+    def get_train_sessions(self):
+        return self.train_genr, tf.group(self.disc_clip, self.train_disc)
+    
+    def get_losses(self):
+        return self.genr_loss, self.disc_loss
+
+# losses from "Improved Training of Wasserstein GANs" :https://arxiv.org/pdf/1704.00028.pdf
+class wasserstein_gp(distance):
+    def __init__(self, **kwargs):
+        super(wasserstein_gp, self).__init__(**kwargs)
+        
+        gp = gradient_penalty(self.real, self.fake, self.D)
+    
+        self.disc_loss = tf.reduce_mean(self.logit_fake) - tf.reduce_mean(self.logit_real) + gp
+        self.genr_loss = -tf.reduce_mean(self.logit_fake) 
+        
+        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=self.genr_vars) 
+        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=self.disc_vars)
+    
+    def get_train_sessions(self):
+        return self.train_genr, self.train_disc
+    
+    def get_losses(self):
+        return self.genr_loss, self.disc_loss
+
+# not yet        
+class cramer(distance):
+    def __init__(self, **kwargs):
+        super(cramer, self).__init__(**kwargs)        
+        
+        
+    def get_train_sessions(self):
+        return self.train_genr, self.train_disc
+    
+    def get_losses(self):
+        return self.genr_loss, self.disc_loss        

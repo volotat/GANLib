@@ -15,13 +15,8 @@ from .. import distances
 
 
 #       To do:
-#   Make it possible to choose on witch type of losses (WGAN/ WGAN GP/ Cramer/ Vanilla) it will be trained on
 #   Make it possible to pass list of data arrays to any GAN and possible use it as labels, references and so on.
 #   Rename module
-
-# Distances:
-# Wasserstein
-# Cramer
 
 class GAN_tf(object):
     def metric_test(self, set, pred_num = 32):    
@@ -35,7 +30,7 @@ class GAN_tf(object):
         met_arr = self.metric_func(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, optimizer = None, distance = None, metric = None):
+    def __init__(self, input_shape, latent_dim = 100, optimizer = None, distance = None, metric = None, n_critic = 1):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
         
@@ -54,6 +49,8 @@ class GAN_tf(object):
         
         if metric is None: self.metric_func = metrics.magic_distance
         else: self.metric_func = metric
+        
+        self.n_critic = n_critic
         
         self.sess = tf.Session()
         
@@ -87,13 +84,17 @@ class GAN_tf(object):
         real = self.disc_input
         fake = self.genr
         
-        self.disc_loss, self.genr_loss = self.distance(logit_real, logit_fake, real, fake, G, D)
+        dist = self.distance(
+            optimizer = self.optimizer, 
+            logits = [logit_real, logit_fake], 
+            examples = [real, fake], 
+            models = [G, D],
+            vars = [tf.trainable_variables('G'), tf.trainable_variables('D')]
+            )
+            
+        self.train_genr, self.train_disc = dist.get_train_sessions() 
+        self.genr_loss, self.disc_loss = dist.get_losses()
         
-        disc_vars = tf.trainable_variables('D')
-        genr_vars = tf.trainable_variables('G')
-        self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=genr_vars) 
-        self.train_disc = self.optimizer.minimize(self.disc_loss, var_list=disc_vars)
-       
         self.sess.run(tf.global_variables_initializer())
         
     def prepare_data(self, data_set, validation_split, batch_size):
@@ -110,17 +111,19 @@ class GAN_tf(object):
         return imgs
         
     def train_on_batch(self, batch_size):
+        for j in range(self.n_critic):
+            # Select a random batch of images
+            idx = np.random.randint(0, self.train_set.shape[0], batch_size)
+            imgs = self.train_set[idx]
         
-        # Select a random batch of images
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
-        
-        # Sample noise as generator input
+            # Sample noise as generator input
+            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            self.sess.run(self.train_disc, feed_dict={self.disc_input: imgs, self.genr_input: noise})
+            
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        _, d_loss = self.sess.run([self.train_disc, self.disc_loss], feed_dict={self.disc_input: imgs, self.genr_input: noise})
+        self.sess.run([self.train_genr], feed_dict={self.genr_input: noise})
         
-        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        _, g_loss = self.sess.run([self.train_genr, self.genr_loss], feed_dict={self.genr_input: noise})
+        d_loss, g_loss = self.sess.run([self.disc_loss, self.genr_loss], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         return d_loss, g_loss
         
         
