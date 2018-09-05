@@ -417,3 +417,10 @@
 **Today's progress** :  All optimization distances are now options on GAN initiation stage. So we don't have to have many different modules for different types of GANs if main structure is the same.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/5daa0753c5cb9e694c6c081695f820415b3b6257)
+
+
+## Day 61 : September 5, 2018
+ 
+**Today's progress** :  Distances now rewritten as classes and only cramer distance left to be realized.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/e4b4a9a35112817fd55e41e7e2e6ae3520cedd3e)
