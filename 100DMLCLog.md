@@ -424,3 +424,10 @@
 **Today's progress** :  Distances now rewritten as classes and only cramer distance left to be realized.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/e4b4a9a35112817fd55e41e7e2e6ae3520cedd3e)
+
+
+## Day 62 : September 6, 2018
+ 
+**Today's progress** :  Added new version of Cramer distance to distances calss.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/9132ef824f0a933a2ede503c2920604b3643a85b)
