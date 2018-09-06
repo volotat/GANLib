@@ -89,6 +89,7 @@ class GAN_tf(object):
             logits = [logit_real, logit_fake], 
             examples = [real, fake], 
             models = [G, D],
+            inputs = [self.genr_input, self.disc_input],
             vars = [tf.trainable_variables('G'), tf.trainable_variables('D')]
             )
             
@@ -96,7 +97,7 @@ class GAN_tf(object):
         self.genr_loss, self.disc_loss = dist.get_losses()
         
         self.sess.run(tf.global_variables_initializer())
-        
+      
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
             split_at = int(data_set.shape[0] * (1. - validation_split))
@@ -121,7 +122,7 @@ class GAN_tf(object):
             self.sess.run(self.train_disc, feed_dict={self.disc_input: imgs, self.genr_input: noise})
             
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        self.sess.run([self.train_genr], feed_dict={self.genr_input: noise})
+        self.sess.run([self.train_genr], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         
         d_loss, g_loss = self.sess.run([self.disc_loss, self.genr_loss], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         return d_loss, g_loss

@@ -49,17 +49,17 @@ def discriminator(x):
     layer = tf.layers.flatten(layer)
     layer = tf.layers.dense(layer,256)
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
-    layer = tf.layers.dense(layer,128)
-    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    validity = tf.layers.dense(layer,128)
+    #layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    validity = tf.layers.dense(layer,1)
+    #validity = tf.layers.dense(layer,1)
 
     return validity
         
 mnist = tf.keras.datasets.mnist    
 tests = { 'dataset':  (mnist, mnist, mnist, mnist),
-          'img_name': ('mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', ),
-          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, )
+          'img_name': ('mnist_cramer', 'mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', ),
+          'distance': (distances.cramer, distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, )
         }
         
 noise_dim = 100    
@@ -89,7 +89,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(2): # len(tests['dataset'])
+for i in range(1): # len(tests['dataset'])
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 
