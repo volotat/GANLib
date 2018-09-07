@@ -431,3 +431,10 @@
 **Today's progress** :  Added new version of Cramer distance to distances calss.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/9132ef824f0a933a2ede503c2920604b3643a85b)
+
+
+## Day 63 : September 7, 2018
+ 
+**Today's progress** :  Started to build conditional GAN in tensorflow branch.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/cf4e33cbed4497e3df2074bdfd217ef41b33d097)
