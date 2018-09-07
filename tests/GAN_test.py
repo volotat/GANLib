@@ -1,4 +1,4 @@
-from GANLib import GAN_tf, distances
+from GANLib import GAN, distances
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -89,7 +89,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(1): # len(tests['dataset'])
+for i in range(len(tests['dataset'])):
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 
@@ -100,7 +100,7 @@ for i in range(1): # len(tests['dataset'])
         X_train = np.expand_dims(X_train, axis=3)
     
     #Run GAN for 20000 iterations
-    gan = GAN_tf(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
+    gan = GAN(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
     gan.discriminator = discriminator

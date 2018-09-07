@@ -1,5 +1,4 @@
 import numpy as np
-import keras
 from scipy import ndimage, misc
 
 
@@ -14,7 +13,7 @@ def magic_distance(set_real, set_pred, p = 1000):
     return result
     
     
-
+'''
 #Works only for images with channel last format    
 inception_model = None
 def inception_score(set_real, set_pred, splits=10):
@@ -41,3 +40,4 @@ def inception_score(set_real, set_pred, splits=10):
         scores.append(np.exp(kl))
         
     return scores
+'''

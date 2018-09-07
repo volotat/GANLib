@@ -16,9 +16,8 @@ from .. import distances
 
 #       To do:
 #   Make it possible to pass list of data arrays to any GAN and possible use it as labels, references and so on.
-#   Rename module
 
-class GAN_tf(object):
+class GAN(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
         

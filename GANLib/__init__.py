@@ -5,6 +5,7 @@ from . import distances
 from . import metrics
 from . import utils
 
-from .GANs.GAN_tf import GAN_tf
+from .GANs.GAN import GAN
+from .GANs.CGAN import CGAN
 
 __version__ = '0.0.6'
