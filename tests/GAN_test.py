@@ -1,10 +1,8 @@
 from GANLib import GAN, distances
 
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-
-import tensorflow as tf
-
 
 def upscale2d(x, factor=2):
     assert isinstance(factor, int) and factor >= 1
@@ -49,10 +47,10 @@ def discriminator(x):
     layer = tf.layers.flatten(layer)
     layer = tf.layers.dense(layer,256)
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
-    validity = tf.layers.dense(layer,128)
-    #layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.dense(layer,128)
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    #validity = tf.layers.dense(layer,1)
+    validity = tf.layers.dense(layer,1)
 
     return validity
         

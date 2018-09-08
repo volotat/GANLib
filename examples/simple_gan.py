@@ -1,33 +1,37 @@
 from GANLib import GAN
 
-from keras.datasets import mnist
-from keras.layers import Input, Dense, Reshape, Flatten
-from keras.models import Model
-
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-# Specify models for Generator and Discriminator
-def build_generator(gan):
-    input_lat = Input(shape=(gan.latent_dim,))
+# G(z)
+def generator(x):
+    layer = tf.layers.dense(x, 256)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
-    layer = Dense(128, activation = 'relu')(input_lat)
-    layer = Dense(256, activation = 'relu')(layer)
-    layer = Dense(784, activation = 'linear')(layer)
-    img = Reshape((28,28,1))(layer)
-
-    return Model(input_lat, img)
+    layer = tf.layers.dense(layer, 784)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
+    
+    layer = tf.reshape(layer,[-1,28,28,1])
+    img = layer
+    return img
         
-def build_discriminator(gan):
-    input_img = Input(shape=gan.input_shape)
+# D(x)
+def discriminator(x):
+    layer = x
     
-    layer = Flatten()(input_img)
-    layer = Dense(256, activation = 'relu')(layer)
-    layer = Dense(128, activation = 'relu')(layer)
-    valid = Dense(1, activation=gan.disc_activation)(layer)
+    layer = tf.layers.flatten(layer)
+    layer = tf.layers.dense(layer,256)
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.dense(layer,128)
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    return Model(input_img, valid) 
+    validity = tf.layers.dense(layer,1)
+
+    return validity
   
 # Save examples of generated images to file  
 def sample_images(gen, file):
@@ -35,7 +39,7 @@ def sample_images(gen, file):
     
     noise = np.random.uniform(-1, 1, (r * c, noise_dim))
 
-    gen_imgs = gen.predict([noise])
+    gen_imgs = gen.predict(noise)
 
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
@@ -55,7 +59,7 @@ def sample_images(gen, file):
     plt.close()    
     
 # Load the dataset
-(data, _), (_, _) = mnist.load_data()
+(data, _), (_, _) = tf.keras.datasets.mnist.load_data()
 
 # Configure input
 data = (data.astype(np.float32) - 127.5) / 127.5
@@ -66,11 +70,11 @@ noise_dim = 100
 
 # Build GAN and train it on data
 gan = GAN(data_shape, noise_dim) #define type of Generative model
-gan.generator = build_generator(gan) #define generator model
-gan.discriminator = build_discriminator(gan) #define discriminator model
+gan.generator = generator #define generator model
+gan.discriminator = discriminator #define discriminator model
 
 def callback():
-    sample_images(gan.generator, 'simple_gan.png')
+    sample_images(gan, 'simple_gan.png')
 
 gan.train(data, epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False) #train GAN for 20000 iterations
 
