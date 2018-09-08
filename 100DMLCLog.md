@@ -438,3 +438,10 @@
 **Today's progress** :  Started to build conditional GAN in tensorflow branch.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/cf4e33cbed4497e3df2074bdfd217ef41b33d097)
+
+
+## Day 64 : September 8, 2018
+ 
+**Today's progress** :  Rewrote gan example for tensorflow base, also improved conditional gan so it's working at least for minmax distance.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/65c21c55ef1479cb69a7391444f12bc137bb72717)
