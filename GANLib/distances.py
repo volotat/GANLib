@@ -27,7 +27,7 @@ def gradient_penalty(X_hat, discriminator, lambda_scale = 10.):
 # ---------------     
 
 class distance(object):
-    def __init__(self, optimizer = None, logits = [None, None], examples = [None, None], models = [None, None], vars = [None, None], inputs = [None, None]):
+    def __init__(self, optimizer = None, logits = [None, None], examples = [None, None], models = [None, None], vars = [None, None], inputs = [None, None], gan = None):
         self.optimizer = optimizer
         
         self.logit_real = logits[0]
@@ -44,6 +44,8 @@ class distance(object):
         
         self.genr_vars = vars[0]
         self.disc_vars = vars[1]
+        
+        self.gan = gan
     
     def get_train_sessions(self):
         pass
@@ -118,8 +120,14 @@ class wasserstein_gp(distance):
     def __init__(self, **kwargs):
         super(wasserstein_gp, self).__init__(**kwargs)
         
+        def D(x):
+            if hasattr(self.gan, 'disc_label'): self.D(x, self.gan.disc_label)
+            else: return self.D(x)
+            
+        G = self.G
+        
         x_hat = interpolate(self.real, self.fake)
-        gp = gradient_penalty(x_hat, self.D)
+        gp = gradient_penalty(x_hat, D)
     
         self.disc_loss = tf.reduce_mean(self.logit_fake) - tf.reduce_mean(self.logit_real) + gp
         self.genr_loss = -tf.reduce_mean(self.logit_fake) 
