@@ -445,3 +445,11 @@
 **Today's progress** :  Rewrote gan example for tensorflow base, also improved conditional gan so it's working at least for minmax distance.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/65c21c55ef1479cb69a7391444f12bc137bb7271)
+
+
+## Day 65 : September 9, 2018
+ 
+**Today's progress** :  Trying to merge conditional gan with gradient penalty, no luck yet.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/ae1712687f300c7d2831b3e06fc3d09ccdacd658)
+
