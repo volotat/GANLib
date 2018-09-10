@@ -453,3 +453,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/ae1712687f300c7d2831b3e06fc3d09ccdacd658)
 
+
+## Day 66 : September 10, 2018
+ 
+**Today's progress** :  Conditional gan now storing history and working with almost all distances except Cramer.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/67000400e25081bd1336f3014858560fc632b2d2)
