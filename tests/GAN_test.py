@@ -55,9 +55,9 @@ def discriminator(x):
     return validity
         
 mnist = tf.keras.datasets.mnist    
-tests = { 'dataset':  (mnist, mnist, mnist, mnist),
-          'img_name': ('mnist_cramer', 'mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', ),
-          'distance': (distances.cramer, distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, )
+tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist),
+          'img_name': ('mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', 'mnist_cramer', ),
+          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, distances.cramer, )
         }
         
 noise_dim = 100    
@@ -87,7 +87,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(len(tests['dataset'])):
+for i in range(0,1):#len(tests['dataset'])
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 

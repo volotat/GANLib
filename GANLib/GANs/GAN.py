@@ -88,8 +88,8 @@ class GAN(object):
             logits = [logit_real, logit_fake], 
             examples = [real, fake], 
             models = [G, D],
-            inputs = [self.genr_input, self.disc_input],
-            vars = [tf.trainable_variables('G'), tf.trainable_variables('D')]
+            vars = [tf.trainable_variables('G'), tf.trainable_variables('D')],
+            gan = self
             )
             
         self.train_genr, self.train_disc = dist.get_train_sessions() 

@@ -96,7 +96,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(3,4): #len(tests['dataset'])
+for i in range(3,4):
     # Load the dataset
     (X_train, labels), (_, _) = tests['dataset'][i].load_data()
 
@@ -118,7 +118,7 @@ for i in range(3,4): #len(tests['dataset'])
     def callback():
         path = 'images/CGAN/tf_'+tests['img_name'][i]
         sample_images(gan, path+'.png')
-        #gan.save_history_to_image(path+'_history.png')
+        gan.save_history_to_image(path+'_history.png')
       
-    gan.train([X_train, Y_train], epochs=5000, batch_size=64, checkpoint_callback = callback, collect_history = False)
+    gan.train([X_train, Y_train], epochs=5000, batch_size=64, checkpoint_callback = callback)
     

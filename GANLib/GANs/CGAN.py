@@ -22,7 +22,7 @@ class CGAN(GAN):
         org_set = set_data[n_indx]
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
-        gen_set = self.generator.predict([noise,labels]) 
+        gen_set = self.predict(noise,labels) 
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
@@ -67,7 +67,6 @@ class CGAN(GAN):
             logits = [logit_real, logit_fake], 
             examples = [real, fake], 
             models = [G, D],
-            inputs = [self.genr_input, self.disc_input],
             vars = [tf.trainable_variables('G'), tf.trainable_variables('D')],
             gan = self
             )
@@ -113,21 +112,6 @@ class CGAN(GAN):
         return d_loss, g_loss
         
     def test_network(self, batch_size):
-        '''
-        idx = np.random.randint(0, self.train_set_data.shape[0], batch_size)
-        imgs, labels = self.train_set_data[idx], self.train_set_labels[idx]
-        
-        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        gen_imgs = self.generator.predict([noise, labels])
-        gen_val = self.discriminator.predict([gen_imgs, labels])
-        train_val = self.discriminator.predict([imgs, labels])
-        
-        if self.valid_set_data is not None and self.valid_set_labels is not None: 
-            idx = np.random.randint(0, self.valid_set_data.shape[0], batch_size)
-            test_val = self.discriminator.predict([self.valid_set_data[idx], self.valid_set_labels[idx]])
-        else:
-            test_val = np.zeros(batch_size)
-        '''    
         metric = self.metric_test(self.train_set_data, self.train_set_labels, batch_size)   
         
-        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
+        return {'metric': metric}
