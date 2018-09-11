@@ -463,6 +463,6 @@
 
 ## Day 67 : September 11, 2018
  
-**Today's progress** :  Tryed to fix bug within Cramer distance.
+**Today's progress** :  Tried to fix bug within Cramer distance.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/35e3c79536ab1ca7dbce1cb93dd07e071aa271e4)
