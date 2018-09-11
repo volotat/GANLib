@@ -87,7 +87,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(0,1):#len(tests['dataset'])
+for i in range(4,5):#len(tests['dataset'])
     # Load the dataset
     (X_train, _), (_, _) = tests['dataset'][i].load_data()
 

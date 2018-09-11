@@ -8,16 +8,18 @@ def interpolate(real, fake):
     epsilon = tf.random_uniform(shape, minval=0., maxval=1.)
     X_hat = real + epsilon * (fake - real)
     X_hat.set_shape(real.get_shape().as_list())
-    
+    X_hat = X_hat * 0. #tf.clip_by_value(X_hat, -1, 1)
     return X_hat
 
-def gradient_penalty(X_hat, discriminator, lambda_scale = 10.):
+def gradient_penalty(X_hat, func, lambda_scale = 10.):
 
-    D_X_hat = discriminator(X_hat)
+    D_X_hat = func(X_hat)
     grad_D_X_hat = tf.gradients(D_X_hat, [X_hat])[0]
+    #grad_D_X_hat = tf.clip_by_value(grad_D_X_hat, -1., 1.)
     red_idx = np.arange(1, X_hat.shape.ndims)
     slopes = tf.sqrt(tf.reduce_sum(tf.square(grad_D_X_hat), reduction_indices=red_idx))
-    gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
+    #slopes = tf.norm(grad_D_X_hat, axis=-1)
+    gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.))
     
     return gradient_penalty * lambda_scale    
 
@@ -150,6 +152,9 @@ class cramer(distance):
     def __init__(self, **kwargs):
         super(cramer, self).__init__(**kwargs)        
         
+        def norm(x):
+            return tf.norm(x, ord = 2, axis = -1)
+        
         D = self.D
         G = self.G
         
@@ -157,24 +162,27 @@ class cramer(distance):
         x_hat = interpolate(self.real, self.fake)
         
         self.genr_loss = tf.reduce_mean(
-              tf.norm(D(self.real) - D(self.fake), axis=-1)
-            + tf.norm(D(self.real) - D(fake_p), axis=-1)
-            - tf.norm(D(self.fake) - D(fake_p), axis=-1)
+              norm(D(self.real) - D(self.fake))
+            + norm(D(self.real) - D(fake_p))
+            - norm(D(self.fake) - D(fake_p))
             )
             
         def L_tilta(u,v):
             return tf.reduce_mean(
-              tf.norm(D(self.real) - D(v), axis=-1) - tf.norm(D(self.real), axis=-1) 
-            - tf.norm(D(u) - D(v), axis=-1) + tf.norm(D(u), axis=-1) 
+              norm(D(self.real) - D(v)) - norm(D(self.real)) 
+            - norm(D(u) - D(v)) + norm(D(u)) 
             )
             
         Ls = 0.5 * (L_tilta(self.fake, fake_p) + L_tilta(fake_p, self.fake)) 
 
         def F(x):
             return tf.reduce_mean(
-              tf.norm(D(x) - D(self.fake), axis=-1) - tf.norm(D(x) - D(self.real), axis=-1)
+                norm(D(x) - D(self.fake)) 
+              - norm(D(x) - D(self.real))
             )
         gp = gradient_penalty(x_hat, F)
+        #gp = tf.clip_by_value(gp, -1, 1)
+        
         
         self.disc_loss = -Ls + gp
         
