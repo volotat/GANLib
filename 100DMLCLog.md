@@ -466,3 +466,11 @@
 **Today's progress** :  Tried to fix bug within Cramer distance.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/35e3c79536ab1ca7dbce1cb93dd07e071aa271e4)
+
+
+## Day 68 : September 12, 2018
+ 
+**Today's progress** :  Cramer distance bug fixed. Conditional GAN now supports all available distances.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/4af1da77d7bdaccc4a44a913b1411c1ec6af5839)
+
