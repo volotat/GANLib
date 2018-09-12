@@ -119,7 +119,7 @@ class GAN(object):
             # Sample noise as generator input
             noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
             self.sess.run(self.train_disc, feed_dict={self.disc_input: imgs, self.genr_input: noise})
-            
+                        
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
         self.sess.run([self.train_genr], feed_dict={self.disc_input: imgs, self.genr_input: noise})
         
@@ -192,6 +192,7 @@ class GAN(object):
             if epoch % checkpoint_range == 0:
                 if not collect_history:
                     if verbose: print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
+                    exit()
                 else:
                     dict_of_vals = self.test_network(128)
                     dict_of_vals['D loss'] = d_loss

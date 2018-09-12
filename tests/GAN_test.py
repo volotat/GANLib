@@ -41,7 +41,7 @@ def generator(x):
     return img
 
 # D(x)
-def discriminator(x):
+def discriminator(x, outputs):
     layer = x
     
     layer = tf.layers.flatten(layer)
@@ -50,14 +50,15 @@ def discriminator(x):
     layer = tf.layers.dense(layer,128)
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    validity = tf.layers.dense(layer,1)
+    validity = tf.layers.dense(layer, outputs)
 
     return validity
         
 mnist = tf.keras.datasets.mnist    
 tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist),
           'img_name': ('mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', 'mnist_cramer', ),
-          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, distances.cramer, )
+          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, distances.cramer, ),
+          'disc_out': (1, 1, 1, 1, 128, )
         }
         
 noise_dim = 100    
@@ -101,7 +102,7 @@ for i in range(4,5):#len(tests['dataset'])
     gan = GAN(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
-    gan.discriminator = discriminator
+    gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
    
     def callback():
         path = 'images/GAN/tf_'+tests['img_name'][i]

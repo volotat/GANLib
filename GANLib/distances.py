@@ -8,17 +8,14 @@ def interpolate(real, fake):
     epsilon = tf.random_uniform(shape, minval=0., maxval=1.)
     X_hat = real + epsilon * (fake - real)
     X_hat.set_shape(real.get_shape().as_list())
-    X_hat = X_hat * 0. #tf.clip_by_value(X_hat, -1, 1)
     return X_hat
 
 def gradient_penalty(X_hat, func, lambda_scale = 10.):
 
     D_X_hat = func(X_hat)
     grad_D_X_hat = tf.gradients(D_X_hat, [X_hat])[0]
-    #grad_D_X_hat = tf.clip_by_value(grad_D_X_hat, -1., 1.)
     red_idx = np.arange(1, X_hat.shape.ndims)
     slopes = tf.sqrt(tf.reduce_sum(tf.square(grad_D_X_hat), reduction_indices=red_idx))
-    #slopes = tf.norm(grad_D_X_hat, axis=-1)
     gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.))
     
     return gradient_penalty * lambda_scale    
@@ -40,9 +37,6 @@ class distance(object):
         
         self.G = models[0]
         self.D = models[1]
-        
-        #self.G_input = inputs[0]
-        #self.D_input = inputs[1]
         
         self.genr_vars = vars[0]
         self.disc_vars = vars[1]
@@ -148,6 +142,7 @@ class wasserstein_gp(distance):
 
 # distances from "The Cramer Distance as a Solution to Biased Wasserstein Gradients" paper: https://openreview.net/pdf?id=S1m6h21Cb    
 # old version: https://arxiv.org/pdf/1705.10743.pdf  
+# output layer should have more than one outputs !!!
 class cramer(distance):
     def __init__(self, **kwargs):
         super(cramer, self).__init__(**kwargs)        
@@ -155,8 +150,13 @@ class cramer(distance):
         def norm(x):
             return tf.norm(x, ord = 2, axis = -1)
         
-        D = self.D
-        G = self.G
+        def D(x):
+            if hasattr(self.gan, 'disc_label'): return self.D(x, self.gan.disc_label)
+            else: return self.D(x)
+            
+        def G(x):
+            if hasattr(self.gan, 'genr_label'): return self.G(x, self.gan.genr_label)
+            else: return self.G(x)
         
         fake_p = G(tf.random_uniform(tf.shape(self.G_input), minval=-1, maxval=1)) #temporal solution
         x_hat = interpolate(self.real, self.fake)
@@ -176,14 +176,10 @@ class cramer(distance):
         Ls = 0.5 * (L_tilta(self.fake, fake_p) + L_tilta(fake_p, self.fake)) 
 
         def F(x):
-            return tf.reduce_mean(
-                norm(D(x) - D(self.fake)) 
-              - norm(D(x) - D(self.real))
-            )
+            return tf.reduce_mean( norm(D(x) - D(self.fake)) - norm(D(x) - D(self.real)) )
+        
         gp = gradient_penalty(x_hat, F)
-        #gp = tf.clip_by_value(gp, -1, 1)
-        
-        
+               
         self.disc_loss = -Ls + gp
         
         self.train_genr = self.optimizer.minimize(self.genr_loss, var_list=self.genr_vars) 

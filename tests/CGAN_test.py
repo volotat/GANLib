@@ -45,7 +45,7 @@ def generator(z, l):
     return img
 
 # D(x)
-def discriminator(x, l):
+def discriminator(x, l, outputs):
     layer = x
     
     layer = tf.layers.flatten(layer)
@@ -56,14 +56,15 @@ def discriminator(x, l):
     layer = tf.layers.dense(layer,128)
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
-    validity = tf.layers.dense(layer,1)
+    validity = tf.layers.dense(layer, outputs)
 
     return validity
         
 mnist = tf.keras.datasets.mnist    
 tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist, ),
           'img_name': ('mnist_minmax', 'mnist_cross_entropy', 'mnist_wasserstein', 'mnist_iwasserstein_gp', 'mnist_cramer', ),
-          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, distances.cramer, )
+          'distance': (distances.minmax, distances.cross_entropy, distances.wasserstein, distances.wasserstein_gp, distances.cramer, ),
+          'disc_out': (1, 1, 1, 1, 128, )
         }
         
 noise_dim = 100    
@@ -96,7 +97,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(3,4):
+for i in range(4,5):
     # Load the dataset
     (X_train, labels), (_, _) = tests['dataset'][i].load_data()
 
@@ -113,7 +114,7 @@ for i in range(3,4):
     gan = CGAN([X_train.shape[1:],Y_train.shape[1:]], noise_dim, distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
-    gan.discriminator = discriminator
+    gan.discriminator = lambda x, l: discriminator(x, l, tests['disc_out'][i])
    
     def callback():
         path = 'images/CGAN/tf_'+tests['img_name'][i]
