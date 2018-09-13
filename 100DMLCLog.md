@@ -474,3 +474,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/4af1da77d7bdaccc4a44a913b1411c1ec6af5839)
 
+
+## Day 69 : September 13, 2018
+ 
+**Today's progress** :  Started adding DiscoGAN to Tensorflow branch
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/6bdeda19f704c05f0d4b564f6900bad21fed9d93)
