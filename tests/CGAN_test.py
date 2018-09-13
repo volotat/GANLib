@@ -97,7 +97,7 @@ def sample_images(gen, file):
     plt.close()
 
     
-for i in range(4,5):
+for i in range(len(tests['dataset'])):
     # Load the dataset
     (X_train, labels), (_, _) = tests['dataset'][i].load_data()
 
@@ -110,7 +110,7 @@ for i in range(4,5):
     Y_train = np.zeros((X_train.shape[0],10))
     Y_train[np.arange(X_train.shape[0]), labels] = 1.
     
-    #Run GAN for 20000 iterations
+    #Run GAN for 5000 iterations
     gan = CGAN([X_train.shape[1:],Y_train.shape[1:]], noise_dim, distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator

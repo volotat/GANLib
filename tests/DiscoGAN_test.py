@@ -1,22 +1,11 @@
-from GANLib import GAN, distances
+from GANLib import DiscoGAN, distances
 
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 
-def upscale2d(x, factor=2):
-    assert isinstance(factor, int) and factor >= 1
-    if factor == 1: return x
-    with tf.variable_scope('Upscale2D'):
-        s = x.shape
-        x = tf.reshape(x, [-1, s[1], 1, s[2], 1, s[3]])
-        x = tf.tile(x, [1, 1, factor, 1, factor, 1])
-        x = tf.reshape(x, [-1, s[1] * factor, s[2] * factor, s[3]])
-        return x
-
-# G(z)
-def generator(x):
-    layer = tf.layers.dense(x, 256)
+def encoder(x):
+    layer = tf.layers.dense(x, 784)
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
@@ -24,19 +13,20 @@ def generator(x):
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
-    layer = tf.reshape(layer,[-1,7,7,16])
+    layer = tf.reshape(layer,[-1,28,28,1])
+    img = layer
+    return img
     
-    layer = upscale2d(layer)
-    layer = tf.layers.conv2d(layer, 8, (3,3), padding='same')
-    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+def decoder(x):
+    layer = tf.layers.dense(x, 784)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
-    layer = upscale2d(layer)
-    layer = tf.layers.conv2d(layer, 4, (3,3), padding='same')
-    layer = tf.nn.leaky_relu(layer, alpha=0.2)
+    layer = tf.layers.dense(layer, 784)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
-    layer = tf.layers.conv2d(layer, 1, (1,1), padding='same')
+    layer = tf.reshape(layer,[-1,28,28,1])
     img = layer
     return img
 
@@ -61,7 +51,6 @@ tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist),
           'disc_out': (1, 1, 1, 1, 128, )
         }
         
-noise_dim = 100    
 
 def sample_images(gen, file):
     r, c = 5, 5
@@ -90,24 +79,37 @@ def sample_images(gen, file):
     
 for i in range(len(tests['dataset'])):
     # Load the dataset
-    (X_train, _), (_, _) = tests['dataset'][i].load_data()
+    (mnist_set, labels), (_, _) = tf.keras.datasets.mnist.load_data()
+    mnist_set = (mnist_set.astype(np.float32) - 127.5) / 127.5
+    mnist_set = np.expand_dims(mnist_set, axis=3)
 
-    # Configure input
-    X_train = (X_train.astype(np.float32) - 127.5) / 127.5
 
-    if len(X_train.shape)<4:
-        X_train = np.expand_dims(X_train, axis=3)
+    (fashion_set, labels), (_, _) = tf.keras.datasets.fashion_mnist.load_data()
+    fashion_set = (fashion_set.astype(np.float32) - 127.5) / 127.5
+    fashion_set = np.expand_dims(fashion_set, axis=3)
+
+    set_domain_A = mnist_set  [:512]
+    set_domain_B = fashion_set[:512]   
     
     #Run GAN for 5000 iterations
-    gan = GAN(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
+    gan = DiscoGAN(set_domain_A.shape[1:], set_domain_B.shape[1:], distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
     gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
+    
+    gan.encoder = encoder
+    gan.decoder = decoder
+    gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
    
     def callback():
-        path = 'images/GAN/tf_'+tests['img_name'][i]
-        sample_images(gan, path+'.png')
-        gan.save_history_to_image(path+'_history.png')
+        path = 'images/DiscoGAN/tf_'+tests['img_name'][i]
+        sample_images(gan.combined_A, path+'A_decoded.png', set_domain_A)
+        sample_images(gan.combined_B, path+'B_decoded.png', set_domain_B)
+        
+        sample_images(gan.encoder, path+'A_encoded.png', set_domain_A)
+        sample_images(gan.decoder, path+'B_encoded.png', set_domain_B)
+        
+        gan.save_history_to_image(path+'History.png')
       
-    gan.train(X_train, epochs=5000, batch_size=64, checkpoint_callback = callback)
+    gan.train([set_domain_A, set_domain_B], epochs=5000, batch_size=64, checkpoint_callback = callback)
     
