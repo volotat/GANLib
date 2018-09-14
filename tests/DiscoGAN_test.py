@@ -52,12 +52,10 @@ tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist),
         }
         
 
-def sample_images(gen, file):
+def sample_images(gen, file, dom_set):
     r, c = 5, 5
     
-    noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-
-    gen_imgs = gen.predict(noise)
+    gen_imgs = gen.predict([dom_set[:r*c]])
 
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
@@ -73,7 +71,7 @@ def sample_images(gen, file):
                 axs[i,j].imshow(gen_imgs[cnt,:,:])
             axs[i,j].axis('off')
             cnt += 1
-    fig.savefig(file) #% epoch
+    fig.savefig(file)
     plt.close()
 
     
@@ -92,7 +90,7 @@ for i in range(len(tests['dataset'])):
     set_domain_B = fashion_set[:512]   
     
     #Run GAN for 5000 iterations
-    gan = DiscoGAN(set_domain_A.shape[1:], set_domain_B.shape[1:], distance = tests['distance'][i], n_critic = 3)
+    gan = DiscoGAN([set_domain_A.shape[1:], set_domain_B.shape[1:]], distance = tests['distance'][i], n_critic = 3)
     
     gan.generator = generator
     gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])

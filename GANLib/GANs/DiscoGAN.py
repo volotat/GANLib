@@ -20,8 +20,9 @@ from .GAN import GAN
 
 class DiscoGAN(GAN):
     def __init__(self, input_shapes, latent_dim = 100, **kwargs):
-        super(DiscoGAN, self).__init__(input_shapes[0], latent_dim , **kwargs)
-        self.label_shape = input_shapes[1]
+        super(DiscoGAN, self).__init__(input_shapes, latent_dim , **kwargs)
+        self.input_shape_a = input_shapes[0]
+        self.input_shape_b = input_shapes[1]
         
     def set_models_params(self):
         if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.001, 0.5, epsilon = 1e-07)
@@ -31,21 +32,26 @@ class DiscoGAN(GAN):
 
     def build_graph(self):
         
-        def G(x, l):
-            with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
-                res = self.generator(x, l)
+        def ENC(x):
+            with tf.variable_scope('ENC', reuse=tf.AUTO_REUSE) as scope:
+                res = self.encoder(x)
             return res
             
-        def D(x, l):
+        def DEC(x):
+            with tf.variable_scope('DEC', reuse=tf.AUTO_REUSE) as scope:
+                res = self.decoder(x)
+            return res
+            
+        def D(x):
             with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
-                logits = self.discriminator(x, l)
+                logits = self.discriminator(x)
             return logits
         
-        self.genr_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
-        self.genr_label = tf.placeholder(tf.float32, shape=(None,) + self.label_shape)
+        self.enc_input = tf.placeholder(tf.float32, shape=(None, self.input_shape_b))
+        self.dec_input = tf.placeholder(tf.float32, shape=(None, self.input_shape_a))
         
-        self.disc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
-        self.disc_label = tf.placeholder(tf.float32, shape=(None,) + self.label_shape)
+        self.disc_input_a = tf.placeholder(tf.float32, shape=(None,) + self.input_shape_a)
+        self.disc_input_b = tf.placeholder(tf.float32, shape=(None,) + self.input_shape_b)
         
         
         self.genr = G(self.genr_input, self.genr_label)
@@ -68,20 +74,14 @@ class DiscoGAN(GAN):
         self.genr_loss, self.disc_loss = dist.get_losses()
         
         self.sess.run(tf.global_variables_initializer())
-     
+    
     def prepare_data(self, data_set, validation_split, batch_size):
-        if 0. < validation_split < 1.:
-            split_at = int(data_set[0].shape[0] * (1. - validation_split))
-            self.train_set_data = data_set[0][:split_at]
-            self.valid_set_data = data_set[0][split_at:]
-            
-            self.train_set_labels = data_set[1][:split_at]
-            self.valid_set_labels = data_set[1][split_at:]
-        else:
-            self.train_set_data = data_set[0]
-            self.train_set_labels = data_set[1]
-            self.valid_set_data = None
-            self.valid_set_labels = None
+        '''
+        super(DiscoGAN, self).prepare_data(data_set, validation_split, batch_size)
+        
+        self.domain_A_set = self.train_set[0]
+        self.domain_B_set = self.train_set[1]
+        '''
      
     def predict(self, noise, labels):  
         imgs = self.sess.run(self.genr, feed_dict = {self.genr_input: noise, self.genr_label: labels})
@@ -105,6 +105,6 @@ class DiscoGAN(GAN):
         return d_loss, g_loss
         
     def test_network(self, batch_size):
-        metric = self.metric_test(self.train_set_data, self.train_set_labels, batch_size)   
+        metric = self.m_loss   
         
         return {'metric': metric}
