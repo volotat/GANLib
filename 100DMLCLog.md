@@ -481,9 +481,16 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/6bdeda19f704c05f0d4b564f6900bad21fed9d93)
 
+
 ## Day 70 : September 14, 2018
  
 **Today's progress** :  Continue working on tensorflow implementation of DiscoGAN.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/f22555b82e94dde510366f404509d1351be22d1e)
 
+
+## Day 71 : September 15, 2018
+ 
+**Today's progress** :  DiscoGAN on Tensorflow branch is now partially working. Only discriminator part left to manage.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/759cce4215d76ae2f1ca94e29a56e133c84f08be)
