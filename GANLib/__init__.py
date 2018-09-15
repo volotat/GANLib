@@ -7,5 +7,6 @@ from . import utils
 
 from .GANs.GAN import GAN
 from .GANs.CGAN import CGAN
+from .GANs.DiscoGAN import DiscoGAN
 
 __version__ = '0.0.6'

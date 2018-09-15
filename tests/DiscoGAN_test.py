@@ -5,27 +5,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def encoder(x):
-    layer = tf.layers.dense(x, 784)
+    layer = tf.layers.flatten(x)
+    layer = tf.layers.dense(layer, 256)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
+    
+    layer = tf.layers.dense(layer, 256)
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = tf.layers.dense(layer, 784)
-    layer = tf.nn.leaky_relu(layer,alpha=0.2)
-    layer = tf.layers.batch_normalization(layer, momentum=0.8)
-    
     layer = tf.reshape(layer,[-1,28,28,1])
     img = layer
     return img
     
 def decoder(x):
-    layer = tf.layers.dense(x, 784)
+    layer = tf.layers.flatten(x)
+    layer = tf.layers.dense(layer, 256)
+    layer = tf.nn.leaky_relu(layer,alpha=0.2)
+    layer = tf.layers.batch_normalization(layer, momentum=0.8)
+    
+    layer = tf.layers.dense(layer, 256)
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
     layer = tf.layers.dense(layer, 784)
-    layer = tf.nn.leaky_relu(layer,alpha=0.2)
-    layer = tf.layers.batch_normalization(layer, momentum=0.8)
-    
     layer = tf.reshape(layer,[-1,28,28,1])
     img = layer
     return img
@@ -52,11 +56,16 @@ tests = { 'dataset':  (mnist, mnist, mnist, mnist, mnist),
         }
         
 
-def sample_images(gen, file, dom_set):
-    r, c = 5, 5
+def sample_images(enc, dec, file, dom_set):
+    r, c = 6, 5
     
-    gen_imgs = gen.predict([dom_set[:r*c]])
-
+    enc_imgs = enc(dom_set[:r*c])
+    dec_imgs = dec(enc_imgs)
+    
+    res = enc_imgs.copy()
+    res[r*c//2:] = dec_imgs[:r*c//2]
+    gen_imgs = res
+    
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
     gen_imgs = np.clip(gen_imgs,0,1)
@@ -75,7 +84,7 @@ def sample_images(gen, file, dom_set):
     plt.close()
 
     
-for i in range(len(tests['dataset'])):
+for i in range(1): #len(tests['dataset'])
     # Load the dataset
     (mnist_set, labels), (_, _) = tf.keras.datasets.mnist.load_data()
     mnist_set = (mnist_set.astype(np.float32) - 127.5) / 127.5
@@ -92,22 +101,16 @@ for i in range(len(tests['dataset'])):
     #Run GAN for 5000 iterations
     gan = DiscoGAN([set_domain_A.shape[1:], set_domain_B.shape[1:]], distance = tests['distance'][i], n_critic = 3)
     
-    gan.generator = generator
-    gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
-    
     gan.encoder = encoder
     gan.decoder = decoder
     gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
    
     def callback():
         path = 'images/DiscoGAN/tf_'+tests['img_name'][i]
-        sample_images(gan.combined_A, path+'A_decoded.png', set_domain_A)
-        sample_images(gan.combined_B, path+'B_decoded.png', set_domain_B)
+        sample_images(gan.encode_a, gan.encode_b, path+'A_encoded.png', set_domain_A)
+        sample_images(gan.encode_b, gan.encode_a, path+'B_encoded.png', set_domain_B)
         
-        sample_images(gan.encoder, path+'A_encoded.png', set_domain_A)
-        sample_images(gan.decoder, path+'B_encoded.png', set_domain_B)
-        
-        gan.save_history_to_image(path+'History.png')
+        gan.save_history_to_image(path+'_history.png')
       
     gan.train([set_domain_A, set_domain_B], epochs=5000, batch_size=64, checkpoint_callback = callback)
     
