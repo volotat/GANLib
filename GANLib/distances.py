@@ -26,7 +26,7 @@ def gradient_penalty(X_hat, func, lambda_scale = 10.):
 # ---------------     
 
 class distance(object):
-    def __init__(self, optimizer = None, logits = [None, None], examples = [None, None], models = [None, None], vars = [None, None], gan = None):
+    def __init__(self, optimizer = None, logits = [None, None], examples = [None, None], models = [None, None], inputs = [None, None], vars = [None, None], gan = None):
         self.optimizer = optimizer
         
         self.logit_real = logits[0]
@@ -41,10 +41,10 @@ class distance(object):
         self.genr_vars = vars[0]
         self.disc_vars = vars[1]
         
-        self.gan = gan
+        self.G_input = inputs[0]
+        self.D_input = inputs[1]
         
-        self.G_input = gan.genr_input
-        self.D_input = gan.disc_input
+        self.gan = gan
     
     def get_train_sessions(self):
         pass

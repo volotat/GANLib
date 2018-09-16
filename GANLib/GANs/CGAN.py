@@ -67,6 +67,7 @@ class CGAN(GAN):
             logits = [logit_real, logit_fake], 
             examples = [real, fake], 
             models = [G, D],
+            inputs = [self.genr_input, self.disc_input],
             vars = [tf.trainable_variables('G'), tf.trainable_variables('D')],
             gan = self
             )

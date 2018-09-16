@@ -34,7 +34,6 @@ def decoder(x):
     img = layer
     return img
 
-# D(x)
 def discriminator(x, outputs):
     layer = x
     
@@ -84,7 +83,7 @@ def sample_images(enc, dec, file, dom_set):
     plt.close()
 
     
-for i in range(1): #len(tests['dataset'])
+for i in range(1,5): #len(tests['dataset'])
     # Load the dataset
     (mnist_set, labels), (_, _) = tf.keras.datasets.mnist.load_data()
     mnist_set = (mnist_set.astype(np.float32) - 127.5) / 127.5
@@ -103,12 +102,13 @@ for i in range(1): #len(tests['dataset'])
     
     gan.encoder = encoder
     gan.decoder = decoder
-    gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
+    gan.discriminator_a = lambda x: discriminator(x, tests['disc_out'][i])
+    gan.discriminator_b = lambda x: discriminator(x, tests['disc_out'][i])
    
     def callback():
         path = 'images/DiscoGAN/tf_'+tests['img_name'][i]
-        sample_images(gan.encode_a, gan.encode_b, path+'A_encoded.png', set_domain_A)
-        sample_images(gan.encode_b, gan.encode_a, path+'B_encoded.png', set_domain_B)
+        sample_images(gan.encode_a, gan.encode_b, path+'_a.png', set_domain_A)
+        sample_images(gan.encode_b, gan.encode_a, path+'_b.png', set_domain_B)
         
         gan.save_history_to_image(path+'_history.png')
       
