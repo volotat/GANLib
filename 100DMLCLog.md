@@ -494,3 +494,10 @@
 **Today's progress** :  DiscoGAN on Tensorflow branch is now partially working. Only discriminator part left to manage.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/759cce4215d76ae2f1ca94e29a56e133c84f08be)
+
+
+## Day 72 : September 16, 2018
+ 
+**Today's progress** :  DiscoGAN on Tensorflow branch is now fully working, exactly as in an original paper. It also supports all available distances.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/df5515b3a2ef1c75b386236c403b3500c0c80228)
