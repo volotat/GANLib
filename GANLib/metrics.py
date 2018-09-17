@@ -2,7 +2,7 @@ import numpy as np
 from scipy import ndimage, misc
 
 
-#Distance defined as (1 - average of probabilities data points from one set appears in other set)
+#Distance defined as (1 - average of probabilities data points from one set appears in other set), the higher p and amount of data points the better the estimate
 def magic_distance(set_real, set_pred, p = 1000):
     set_pred_ = np.expand_dims(set_pred, axis=-1)
     set_real_ = np.expand_dims(set_real, axis=-1)
