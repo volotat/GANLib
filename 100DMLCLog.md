@@ -501,3 +501,10 @@
 **Today's progress** :  DiscoGAN on Tensorflow branch is now fully working, exactly as in an original paper. It also supports all available distances.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/df5515b3a2ef1c75b386236c403b3500c0c80228)
+
+
+## Day 73 : September 17, 2018
+ 
+**Today's progress** :  Started building Adversarial Autoencoder in tensorflow branch.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/06ec159afc12131bdfc6009bb2a5306f68c95f37)
