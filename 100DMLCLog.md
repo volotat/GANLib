@@ -510,4 +510,8 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/06ec159afc12131bdfc6009bb2a5306f68c95f37)
 
 
-b09f1462dfe05b25a669f11c12545c1040060b13
+## Day 74 : September 18, 2018
+ 
+**Today's progress** :  Complete building Adverserial Autoencoder. Now it also working with all available distances.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b09f1462dfe05b25a669f11c12545c1040060b13)
