@@ -6,7 +6,7 @@ from . import metrics
 from . import utils
 
 from .GANs.GAN import GAN #main class
-from .GANs.AAR import AAE
+from .GANs.AAE import AAE
 from .GANs.CGAN import CGAN
 from .GANs.DiscoGAN import DiscoGAN
 

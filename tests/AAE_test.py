@@ -18,8 +18,7 @@ def encoder(x):
     layer = tf.nn.leaky_relu(layer,alpha=0.2)
     layer = tf.layers.batch_normalization(layer, momentum=0.8)
     
-    layer = tf.layers.dense(layer, 784)
-    layer = tf.reshape(layer,[-1,28,28,1])
+    layer = tf.layers.dense(layer, noise_dim)
     img = layer
     return img
     
