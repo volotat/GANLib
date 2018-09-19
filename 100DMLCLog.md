@@ -515,3 +515,10 @@
 **Today's progress** :  Complete building Adverserial Autoencoder. Now it also working with all available distances.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b09f1462dfe05b25a669f11c12545c1040060b13)
+
+
+## Day 75 : September 19, 2018
+ 
+**Today's progress** :  Started building Progressive Growing example on Tensorflow branch. 
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/7833c661bca52a4d7807f218337fffa92e51ab6d)
