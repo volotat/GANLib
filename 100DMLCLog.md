@@ -524,6 +524,8 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/7833c661bca52a4d7807f218337fffa92e51ab6d)
 
 
+## Day 76 : September 20, 2018
+ 
+**Today's progress** :  Continue working on Progressive Growing example on Tensorflow branch. 
 
-
-https://github.com/Mylittlerapture/GANLib/commit/366b77e674283549a26a9ee17c1f516391e38f74
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/366b77e674283549a26a9ee17c1f516391e38f74)
