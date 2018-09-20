@@ -522,3 +522,8 @@
 **Today's progress** :  Started building Progressive Growing example on Tensorflow branch. 
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/7833c661bca52a4d7807f218337fffa92e51ab6d)
+
+
+
+
+https://github.com/Mylittlerapture/GANLib/commit/366b77e674283549a26a9ee17c1f516391e38f74
