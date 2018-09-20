@@ -193,7 +193,6 @@ class GAN(object):
             if epoch % checkpoint_range == 0:
                 if not collect_history:
                     if verbose: print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
-                    exit()
                 else:
                     dict_of_vals = self.test_network(128)
                     dict_of_vals['D loss'] = d_loss
