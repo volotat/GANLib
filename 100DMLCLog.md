@@ -531,4 +531,8 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/366b77e674283549a26a9ee17c1f516391e38f74)
 
 
-https://github.com/Mylittlerapture/GANLib/commit/620a0926948a606b4d4556d7f895e4c78b9e2930
+## Day 77 : September 21, 2018
+ 
+**Today's progress** :  Trying to make transition alpha works in a new way, but do not found the solution yet.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/620a0926948a606b4d4556d7f895e4c78b9e2930)
