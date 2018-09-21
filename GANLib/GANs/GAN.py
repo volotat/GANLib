@@ -5,6 +5,8 @@ from .. import metrics
 from .. import utils
 from .. import distances
 
+import time
+
 #                   Generative Adversarial Network
 #   Paper: https://arxiv.org/pdf/1406.2661.pdf
 
@@ -38,8 +40,8 @@ class GAN(object):
         
         self.history = None
         
-        #self.epoch = utils.tensor_value(0)
-        #self.epochs = utils.tensor_value(0)
+        self.epoch = tf.Variable(0)
+        self.epochs = tf.Variable(0)
         
         self.optimizer = optimizer
         self.distance = distance
@@ -175,24 +177,28 @@ class GAN(object):
         history = { 'best_metric':0,
                     'hist_size'  :0}
                     
-        #self.epoch.set(0)
-        #self.epochs.set(epochs)
+        self.epoch.load(0, self.sess)
+        self.epochs.load(epochs, self.sess)
         
         # Build Network
         
         self.prepare_data(data_set, validation_split, batch_size)
         self.build_models()
         
+        t = time.time()
         # Train Network
         for epoch in range(epochs):
-            #self.epoch.set(epoch)
+            self.epoch.load(epoch, self.sess)
+            #self.train_params = {self.epoch: epoch, self.epochs: epochs}
             
             d_loss, g_loss = self.train_on_batch(batch_size)
             
             # Save history
             if epoch % checkpoint_range == 0:
+                d_t = time.time() - t
+                t = time.time()
                 if not collect_history:
-                    if verbose: print('%d [D loss: %f] [G loss: %f]' % (epoch, d_loss, g_loss))
+                    if verbose: print('%d [D loss: %f] [G loss: %f] time: %f' % (epoch, d_loss, g_loss, d_t))
                 else:
                     dict_of_vals = self.test_network(128)
                     dict_of_vals['D loss'] = d_loss

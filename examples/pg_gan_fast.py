@@ -122,10 +122,14 @@ def new_sheet(filters, kernel_size, padding, name, pix_norm = True):
         return layer
     return func
     
-def transition_alpha(self):
-    return K.minimum(self.epoch.tensor / (self.epochs.tensor/2), 1) 
+def transition_alpha(gan):
+    epoch = tf.cast(gan.epoch, tf.float32)
+    epochs = tf.cast(gan.epochs, tf.float32)
+    a = epoch / (epochs/ 2)
+    b = 1
+    return tf.minimum(a, b) 
    
-def generator(input):
+def generator(input, gan):
     previous_step = None
     next_step = None
 
@@ -150,13 +154,14 @@ def generator(input):
     if previous_step is not None: 
         previous_step = tf.layers.conv2d(previous_step, channels, (1,1), name = 'to_rgb') 
         #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
-        layer = next_step
+        layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
+        layer = previous_step
     else:
         layer = next_step
       
     return layer
     
-def discriminator(input):
+def discriminator(input, gan):
     previous_step = None
     next_step = None
     
@@ -181,7 +186,8 @@ def discriminator(input):
             #previous_step = utils.PixelNorm()(previous_step)
         
             #layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
-            layer = next_step
+            layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
+            #layer = next_step
                 
     
     #layer = utils.MiniBatchStddev(group_size=4)(layer)
@@ -238,7 +244,7 @@ if len(dataset.shape)<4:
 # 6000 examples is not enough, so we augment dataset by shifting it along axis by 1 pixel 
 dataset = augment(dataset)
  
-epochs_list = [4000, 8000, 16000, 32000]
+epochs_list = [400, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
 
@@ -251,9 +257,9 @@ for i in range(len(epochs_list)):
     print(data_set.shape)
     
     # Build and train GAN
-    gan = GAN(data_set.shape[1:], noise_dim, optimizer = tf.train.AdamOptimizer(0.001, 0., 0.9, epsilon = 1e-07), distance = distances.wasserstein_gp)
-    gan.generator = generator #define generator model
-    gan.discriminator = discriminator #define discriminator model
+    gan = GAN(sess, data_set.shape[1:], noise_dim, optimizer = tf.train.AdamOptimizer(0.001, 0., 0.9, epsilon = 1e-07), distance = distances.wasserstein_gp)
+    gan.generator = lambda x: generator(x, gan) #define generator model
+    gan.discriminator = lambda x: discriminator(x, gan) #define discriminator model
 
     def callback():
         sample_images(gan, 'pg_gan.png')
