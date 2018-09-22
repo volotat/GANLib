@@ -536,3 +536,7 @@
 **Today's progress** :  Trying to make transition alpha works in a new way, but do not found the solution yet.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/620a0926948a606b4d4556d7f895e4c78b9e2930)
+
+
+
+https://github.com/Mylittlerapture/GANLib/commit/a139ffac86b06bccfcf875e36e0b635741603f41
