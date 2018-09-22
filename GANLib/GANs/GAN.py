@@ -31,7 +31,7 @@ class GAN(object):
         met_arr = self.metric_func(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shape, latent_dim = 100, optimizer = None, distance = None, metric = None, n_critic = 1):
+    def __init__(self, sess, input_shape, latent_dim = 100, optimizer = None, distance = None, metric = None, n_critic = 1):
         self.input_shape = input_shape
         self.latent_dim = latent_dim
         
@@ -53,7 +53,7 @@ class GAN(object):
         
         self.n_critic = n_critic
         
-        self.sess = tf.Session()
+        self.sess = sess
         
         
     def set_models_params(self):
@@ -63,7 +63,6 @@ class GAN(object):
         self.models = ['generator', 'discriminator']
         
     def build_graph(self):
-        
         def G(x):
             with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
                 res = self.generator(x)
@@ -95,10 +94,26 @@ class GAN(object):
             gan = self
             )
             
-        self.train_genr, self.train_disc = dist.get_train_sessions() 
+        train_genr, self.train_disc = dist.get_train_sessions() 
         self.genr_loss, self.disc_loss = dist.get_losses()
         
-        self.sess.run(tf.global_variables_initializer())
+        
+        ema = tf.train.ExponentialMovingAverage(decay = 0.999)
+        def ema_getter(getter, name, *args, **kwargs):
+            var = getter(name, *args, **kwargs)
+            ema_var = ema.average(var)
+            print(var, ema_var)
+            return ema_var if ema_var else var
+    
+        with tf.control_dependencies([train_genr]):
+            self.train_genr = ema.apply(tf.trainable_variables('G'))
+            
+        def Smoth_G(x):
+            with tf.variable_scope('G', reuse=tf.AUTO_REUSE, custom_getter = ema_getter) as scope:
+                res = self.generator(x)
+            return res   
+            
+        self.smooth_genr = Smoth_G(self.genr_input)
       
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
@@ -109,8 +124,11 @@ class GAN(object):
             self.train_set = data_set
             self.valid_set = None
     
-    def predict(self, noise):  
-        imgs = self.sess.run(self.genr, feed_dict = {self.genr_input: noise})
+    def predict(self, noise, moving_avarage = False):  
+        if moving_avarage:
+            imgs = self.sess.run(self.smooth_genr, feed_dict = {self.genr_input: noise})
+        else:
+            imgs = self.sess.run(self.genr, feed_dict = {self.genr_input: noise})
         return imgs
         
     def train_on_batch(self, batch_size):
@@ -135,6 +153,14 @@ class GAN(object):
             if not hasattr(self, model): raise Exception("%s are not defined!"%(model))
             
         self.build_graph()
+        
+        
+        vars = tf.global_variables()
+        unint_vars_names = self.sess.run(tf.report_uninitialized_variables(vars))
+        unint_vars_names = [u.decode("utf-8") for u in unint_vars_names]
+        unint_vars = [ v for v in tf.global_variables() if v.name.split(':')[0] in unint_vars_names]
+        
+        self.sess.run(tf.variables_initializer(unint_vars))
       
       
     def test_network(self, batch_size):
@@ -189,7 +215,6 @@ class GAN(object):
         # Train Network
         for epoch in range(epochs):
             self.epoch.load(epoch, self.sess)
-            #self.train_params = {self.epoch: epoch, self.epochs: epochs}
             
             d_loss, g_loss = self.train_on_batch(batch_size)
             
@@ -197,6 +222,7 @@ class GAN(object):
             if epoch % checkpoint_range == 0:
                 d_t = time.time() - t
                 t = time.time()
+                
                 if not collect_history:
                     if verbose: print('%d [D loss: %f] [G loss: %f] time: %f' % (epoch, d_loss, g_loss, d_t))
                 else:
@@ -213,7 +239,7 @@ class GAN(object):
                         
                         history[k][hist_size-1] = np.mean(v),  np.min(v),  np.max(v)
                     
-                    if verbose: print ("%d [D loss: %f] [G loss: %f] [%s: %f]" % (epoch, d_loss, g_loss, 'metric', metric))
+                    if verbose: print ("%d [D loss: %f] [G loss: %f] [%s: %f] time: %f" % (epoch, d_loss, g_loss, 'metric', metric, d_t))
                     
                     if metric < self.best_metric:  #or self.best_model == None:
                         #self.best_model = self.generator.get_weights()
@@ -228,11 +254,8 @@ class GAN(object):
         if save_best_model:
             self.generator.set_weights(self.best_model)    
             
-        #self.epoch.set(epochs)
+        self.epoch.load(epochs, self.sess)
         checkpoint_callback()   
-        
-        self.sess.close()
-        tf.reset_default_graph()
         return self.history   
 
     def save_history_to_image(self, file):
