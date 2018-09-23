@@ -545,4 +545,8 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/a139ffac86b06bccfcf875e36e0b635741603f41)
 
 
-https://github.com/Mylittlerapture/GANLib/commit/b1e62c0dc6a02f543c85d93c7199e82209f142c6
+## Day 79 : September 23, 2018
+ 
+**Today's progress** :  Sission initialization syntax update for all GANs.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b1e62c0dc6a02f543c85d93c7199e82209f142c6)
