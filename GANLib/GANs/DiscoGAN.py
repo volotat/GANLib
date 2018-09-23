@@ -15,8 +15,8 @@ from .GAN import GAN
 #   In limit it suppose to find one to one bijection mapping between this sets.
 
 class DiscoGAN(GAN):
-    def __init__(self, input_shapes, latent_dim = 100, **kwargs):
-        super(DiscoGAN, self).__init__(input_shapes, latent_dim , **kwargs)
+    def __init__(self, sess, input_shapes, latent_dim = 100, **kwargs):
+        super(DiscoGAN, self).__init__(sess, input_shapes, latent_dim , **kwargs)
         self.input_shape_a = input_shapes[0]
         self.input_shape_b = input_shapes[1]
         

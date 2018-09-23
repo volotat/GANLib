@@ -15,8 +15,8 @@ from .GAN import GAN
 #   useful latent representation of data. 
 
 class AAE(GAN):
-    def __init__(self, input_shape, latent_dim = 100, **kwargs):
-        super(AAE, self).__init__(input_shape, latent_dim , **kwargs)
+    def __init__(self, sess, input_shape, latent_dim = 100, **kwargs):
+        super(AAE, self).__init__(sess, input_shape, latent_dim , **kwargs)
         
     def set_models_params(self):
         if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002, 0.5, epsilon = 1e-07)

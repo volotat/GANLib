@@ -26,8 +26,8 @@ class CGAN(GAN):
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shapes, latent_dim = 100, **kwargs):
-        super(CGAN, self).__init__(input_shapes[0], latent_dim , **kwargs)
+    def __init__(self, sess, input_shapes, latent_dim = 100, **kwargs):
+        super(CGAN, self).__init__(sess, input_shapes[0], latent_dim , **kwargs)
         self.label_shape = input_shapes[1]
         
     def set_models_params(self):

@@ -16,9 +16,6 @@ import time
 #   that very similar to given dataset from random noise.
 
 
-#       To do:
-#   Make it possible to pass list of data arrays to any GAN and possible use it as labels, references and so on.
-
 class GAN(object):
     def metric_test(self, set, pred_num = 32):    
         met_arr = np.zeros(pred_num)
@@ -94,27 +91,9 @@ class GAN(object):
             gan = self
             )
             
-        train_genr, self.train_disc = dist.get_train_sessions() 
+        self.train_genr, self.train_disc = dist.get_train_sessions() 
         self.genr_loss, self.disc_loss = dist.get_losses()
         
-        
-        ema = tf.train.ExponentialMovingAverage(decay = 0.999)
-        def ema_getter(getter, name, *args, **kwargs):
-            var = getter(name, *args, **kwargs)
-            ema_var = ema.average(var)
-            print(var, ema_var)
-            return ema_var if ema_var else var
-    
-        with tf.control_dependencies([train_genr]):
-            self.train_genr = ema.apply(tf.trainable_variables('G'))
-            
-        def Smoth_G(x):
-            with tf.variable_scope('G', reuse=tf.AUTO_REUSE, custom_getter = ema_getter) as scope:
-                res = self.generator(x)
-            return res   
-            
-        self.smooth_genr = Smoth_G(self.genr_input)
-      
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
             split_at = int(data_set.shape[0] * (1. - validation_split))
@@ -154,7 +133,25 @@ class GAN(object):
             
         self.build_graph()
         
+        #Smooth generator
+        ema = tf.train.ExponentialMovingAverage(decay = 0.999)
+        def ema_getter(getter, name, *args, **kwargs):
+            var = getter(name, *args, **kwargs)
+            ema_var = ema.average(var)
+            return ema_var if ema_var else var
+            
+        with tf.control_dependencies([self.train_genr]):
+            with tf.variable_scope('', reuse=tf.AUTO_REUSE):
+                self.train_genr = ema.apply(tf.trainable_variables('G'))
+            
+        def Smooth_G(x):
+            with tf.variable_scope('G', reuse=tf.AUTO_REUSE, custom_getter = ema_getter):
+                res = self.generator(x)
+            return res   
+            
+        self.smooth_genr = Smooth_G(self.genr_input)
         
+        #Initialize new variables
         vars = tf.global_variables()
         unint_vars_names = self.sess.run(tf.report_uninitialized_variables(vars))
         unint_vars_names = [u.decode("utf-8") for u in unint_vars_names]
@@ -255,7 +252,7 @@ class GAN(object):
             self.generator.set_weights(self.best_model)    
             
         self.epoch.load(epochs, self.sess)
-        checkpoint_callback()   
+        checkpoint_callback()  
         return self.history   
 
     def save_history_to_image(self, file):

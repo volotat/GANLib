@@ -110,16 +110,17 @@ for i in range(len(tests['dataset'])):
     Y_train = np.zeros((X_train.shape[0],10))
     Y_train[np.arange(X_train.shape[0]), labels] = 1.
     
-    #Run GAN for 5000 iterations
-    gan = CGAN([X_train.shape[1:],Y_train.shape[1:]], noise_dim, distance = tests['distance'][i], n_critic = 3)
-    
-    gan.generator = generator
-    gan.discriminator = lambda x, l: discriminator(x, l, tests['disc_out'][i])
-   
-    def callback():
-        path = 'images/CGAN/tf_'+tests['img_name'][i]
-        sample_images(gan, path+'.png')
-        gan.save_history_to_image(path+'_history.png')
-      
-    gan.train([X_train, Y_train], epochs=5000, batch_size=64, checkpoint_callback = callback)
+    with tf.Session() as sess:
+        #Run GAN for 5000 iterations
+        gan = CGAN(sess, [X_train.shape[1:],Y_train.shape[1:]], noise_dim, distance = tests['distance'][i], n_critic = 3)
+        
+        gan.generator = generator
+        gan.discriminator = lambda x, l: discriminator(x, l, tests['disc_out'][i])
+       
+        def callback():
+            path = 'images/CGAN/tf_'+tests['img_name'][i]
+            sample_images(gan, path+'.png')
+            gan.save_history_to_image(path+'_history.png')
+          
+        gan.train([X_train, Y_train], epochs=5000, batch_size=64, checkpoint_callback = callback)
     

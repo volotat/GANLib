@@ -98,16 +98,17 @@ for i in range(len(tests['dataset'])):
     if len(X_train.shape)<4:
         X_train = np.expand_dims(X_train, axis=3)
     
-    #Run GAN for 5000 iterations
-    gan = GAN(X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
-    
-    gan.generator = generator
-    gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
-   
-    def callback():
-        path = 'images/GAN/tf_'+tests['img_name'][i]
-        sample_images(gan, path+'.png')
-        gan.save_history_to_image(path+'_history.png')
-      
-    gan.train(X_train, epochs=5000, batch_size=64, checkpoint_callback = callback)
+    with tf.Session() as sess:
+        #Run GAN for 5000 iterations
+        gan = GAN(sess, X_train.shape[1:], noise_dim, distance = tests['distance'][i], n_critic = 3)
+        
+        gan.generator = generator
+        gan.discriminator = lambda x: discriminator(x, tests['disc_out'][i])
+       
+        def callback():
+            path = 'images/GAN/tf_'+tests['img_name'][i]
+            sample_images(gan, path+'.png')
+            gan.save_history_to_image(path+'_history.png')
+          
+        gan.train(X_train, epochs=5000, batch_size=64, checkpoint_callback = callback)
     

@@ -97,20 +97,21 @@ for i in range(1,5): #len(tests['dataset'])
     set_domain_A = mnist_set  [:512]
     set_domain_B = fashion_set[:512]   
     
-    #Run GAN for 5000 iterations
-    gan = DiscoGAN([set_domain_A.shape[1:], set_domain_B.shape[1:]], distance = tests['distance'][i], n_critic = 3)
-    
-    gan.encoder = encoder
-    gan.decoder = decoder
-    gan.discriminator_a = lambda x: discriminator(x, tests['disc_out'][i])
-    gan.discriminator_b = lambda x: discriminator(x, tests['disc_out'][i])
-   
-    def callback():
-        path = 'images/DiscoGAN/tf_'+tests['img_name'][i]
-        sample_images(gan.encode_a, gan.encode_b, path+'_a.png', set_domain_A)
-        sample_images(gan.encode_b, gan.encode_a, path+'_b.png', set_domain_B)
+    with tf.Session() as sess:
+        #Run GAN for 5000 iterations
+        gan = DiscoGAN(sess, [set_domain_A.shape[1:], set_domain_B.shape[1:]], distance = tests['distance'][i], n_critic = 3)
         
-        gan.save_history_to_image(path+'_history.png')
-      
-    gan.train([set_domain_A, set_domain_B], epochs=5000, batch_size=64, checkpoint_callback = callback)
+        gan.encoder = encoder
+        gan.decoder = decoder
+        gan.discriminator_a = lambda x: discriminator(x, tests['disc_out'][i])
+        gan.discriminator_b = lambda x: discriminator(x, tests['disc_out'][i])
+       
+        def callback():
+            path = 'images/DiscoGAN/tf_'+tests['img_name'][i]
+            sample_images(gan.encode_a, gan.encode_b, path+'_a.png', set_domain_A)
+            sample_images(gan.encode_b, gan.encode_a, path+'_b.png', set_domain_B)
+            
+            gan.save_history_to_image(path+'_history.png')
+          
+        gan.train([set_domain_A, set_domain_B], epochs=5000, batch_size=64, checkpoint_callback = callback)
     

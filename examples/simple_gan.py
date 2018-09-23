@@ -67,15 +67,15 @@ if len(data.shape)<4: data = np.expand_dims(data, axis=3)
 data_shape = data.shape[1:]
 noise_dim = 100
 
+with tf.Session() as sess:
+    # Build GAN and train it on data
+    gan = GAN(sess, data_shape, noise_dim) #define type of Generative model
+    gan.generator = generator #define generator model
+    gan.discriminator = discriminator #define discriminator model
 
-# Build GAN and train it on data
-gan = GAN(data_shape, noise_dim) #define type of Generative model
-gan.generator = generator #define generator model
-gan.discriminator = discriminator #define discriminator model
+    def callback():
+        sample_images(gan, 'simple_gan.png')
 
-def callback():
-    sample_images(gan, 'simple_gan.png')
-
-gan.train(data, epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False) #train GAN for 20000 iterations
+    gan.train(data, epochs=20000, batch_size=64, checkpoint_callback = callback, collect_history = False) #train GAN for 20000 iterations
 
 

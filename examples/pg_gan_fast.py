@@ -3,6 +3,7 @@ from GANLib import GAN, utils, distances
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from skimage.measure import block_reduce
 
@@ -157,10 +158,10 @@ def discriminator(input, gan):
 #  Main code
 #-------------------------------  
 
-r, c = 4, 6
+r, c = 3, 5
 sample_noise = np.random.uniform(-1, 1, (r * c, noise_dim))
-def sample_images(gen, file, b = True):
-    gen_imgs = gen.predict(sample_noise, moving_avarage = b)
+def sample_images(gen, file):
+    gen_imgs = gen.predict(sample_noise, moving_avarage = True)
 
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
@@ -198,19 +199,24 @@ if len(dataset.shape)<4:
 # 6000 examples is not enough, so we augment dataset by shifting it along axis by 1 pixel 
 dataset = augment(dataset)
  
-epochs_list = [4000, 8000, 16000, 32000]
+epochs_list = [40, 80, 160, 320]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
 
 optimizer = tf.train.AdamOptimizer(0.001, 0., 0.99, epsilon = 1e-08) #Hyperparameters for optimizer from paper
 with tf.Session() as sess:
     ind = 0
+    t = time.time()
+    dataset_t = tf.constant(dataset, dtype = tf.float32)
     for i in range(len(epochs_list)):    
         epochs = epochs_list[i]
         batch_size = batch_size_list[i]
         
         sz = dataset.shape[1] // image_size_list[i]
-        data_set = block_reduce(dataset, block_size=(1, sz, sz, 1), func=np.mean) 
+        #data_set = block_reduce(dataset, block_size=(1, sz, sz, 1), func=np.mean)
+        #data_set = np.zeros((dataset.shape[0], image_size_list[i], image_size_list[i], dataset.shape[-1]))
+        
+        data_set = sess.run(tf.image.resize_bilinear(dataset_t, (image_size_list[i], image_size_list[i])))
         print(data_set.shape)
         
         # Build and train GAN
@@ -221,8 +227,9 @@ with tf.Session() as sess:
         def callback():
             global ind
             ind += 1
-            sample_images(gan, 'imgs/%d.png'%(ind), False)
-            sample_images(gan, 'imgs/%d_.png'%(ind), True) # 'imgs/pg_gan.png'
+            sample_images(gan, 'imgs/%d.png'%(ind)) # 'imgs/pg_gan.png'
             
         gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)         
         sheets += 1
+        
+    print('Training complete! Total traning time: %f s'%(time.time() - t))   
