@@ -547,6 +547,11 @@
 
 ## Day 79 : September 23, 2018
  
-**Today's progress** :  Sission initialization syntax update for all GANs.
+**Today's progress** :  Session initialization syntax update for all GANs.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b1e62c0dc6a02f543c85d93c7199e82209f142c6)
+
+
+## Day 80 : July 24, 2018
+ 
+**Today's progress** :  Testing Tensorflow implementation of PG GAN on celebA dataset.
