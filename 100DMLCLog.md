@@ -552,12 +552,12 @@
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b1e62c0dc6a02f543c85d93c7199e82209f142c6)
 
 
-## Day 80 : July 24, 2018
+## Day 80 : September 24, 2018
  
 **Today's progress** :  Testing Tensorflow implementation of PG GAN on celebA dataset.
 
 
-## Day 81 : September 24, 2018
+## Day 81 : September 25, 2018
  
 **Today's progress** :  Added dynamic weight scaler to PG GAN on Tensorflow branch.
 
