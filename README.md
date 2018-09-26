@@ -13,6 +13,7 @@ Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/maste
 Vanilla GAN. https://arxiv.org/pdf/1406.2661.pdf  
 Conditional GAN. https://arxiv.org/pdf/1411.1784.pdf  
 Disco GAN. https://arxiv.org/pdf/1703.05192.pdf  
+Adversarial Autoencoder. https://arxiv.org/pdf/1511.05644.pdf
 
 ### Optimization Distances
 Minmax (Original GAN optimization distance). https://arxiv.org/pdf/1406.2661.pdf  
