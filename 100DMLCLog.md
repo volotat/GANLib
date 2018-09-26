@@ -559,6 +559,14 @@
 
 ## Day 81 : September 25, 2018
  
-**Today's progress** :  Added dynamic weight scaler to PG GAN on Tensorflow branch.
+**Today's progress** :  Added dynamic weight scaler to fast PG GAN on Tensorflow branch.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/b96ea5b416d0285914d008254ee5ffbd0496d1c2)
+
+
+## Day 82 : September 26, 2018
+ 
+**Today's progress** :  Completed fast version of progressive GAN example on Tensorflow branch. Started to make a proper one.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/e6209fa73c0ee6e7ae29bc70ab62f28c37766f55)
+
