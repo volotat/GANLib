@@ -140,10 +140,6 @@ class GAN(object):
             ema_var = ema.average(var)
             return ema_var if ema_var else var
             
-        with tf.control_dependencies([self.train_genr]):
-            with tf.variable_scope('', reuse=tf.AUTO_REUSE):
-                self.train_genr = ema.apply(tf.trainable_variables('G'))
-            
         def Smooth_G(x):
             with tf.variable_scope('G', reuse=tf.AUTO_REUSE, custom_getter = ema_getter):
                 res = self.generator(x)
@@ -159,7 +155,18 @@ class GAN(object):
         
         self.sess.run(tf.variables_initializer(unint_vars))
       
-      
+        with tf.control_dependencies([self.train_genr]):
+            with tf.variable_scope('', reuse=tf.AUTO_REUSE):
+                self.train_genr = ema.apply(tf.trainable_variables('G'))
+                
+        vars = tf.global_variables()
+        unint_vars_names = self.sess.run(tf.report_uninitialized_variables(vars))
+        unint_vars_names = [u.decode("utf-8") for u in unint_vars_names]
+        unint_vars = [ v for v in tf.global_variables() if v.name.split(':')[0] in unint_vars_names]
+        
+        self.sess.run(tf.variables_initializer(unint_vars))
+                
+                
     def test_network(self, batch_size):
         metric = self.metric_test(self.train_set, batch_size)    
         return {'metric': metric}

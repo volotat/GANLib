@@ -58,12 +58,19 @@ def dynamic_he_scale(x, gain = np.sqrt(2)):
     x_scale = x * K.constant(std)
     
     return x_scale
-'''           
+'''          
+ 
+def get_weight(shape_list, dtype, partition_info):
+    std = np.sqrt(2) / np.sqrt(np.prod(shape_list[:-1]))
+    return tf.get_variable("w", shape=shape_list, initializer=tf.initializers.random_normal(0, 1), dtype = tf.float32) * std
+ 
 #-------------------------------
 # Define models structure
 #-------------------------------      
       
-initialization = tf.initializers.random_normal(0, 0.003) #keras.initializers.RandomNormal(0, 1)  
+initialization = get_weight
+
+#tf.initializers.random_normal(0, 0.003) #keras.initializers.RandomNormal(0, 1)  
 weights_scale_func = lambda x: x #dynamic_he_scale
 
 filters = 64
@@ -139,7 +146,7 @@ def discriminator(input, gan):
             next_step = layer
             
             previous_step = tf.layers.average_pooling2d(input_layer, 2, 2)
-            previous_step = tf.layers.conv2d(previous_step, filters, (1,1), name = 'from_rgb_'+str(sheets - 1)) #from RGB
+            previous_step = tf.layers.conv2d(previous_step, filters, (1,1), name = 'from_rgb_'+str(sheets - 1), kernel_initializer = initialization) #from RGB
             previous_step = tf.nn.leaky_relu(previous_step, alpha=0.2)
         
             layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
@@ -199,7 +206,7 @@ if len(dataset.shape)<4:
 # 6000 examples is not enough, so we augment dataset by shifting it along axis by 1 pixel 
 dataset = augment(dataset)
  
-epochs_list = [40, 80, 160, 320]
+epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
 
