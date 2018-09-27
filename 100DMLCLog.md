@@ -570,3 +570,9 @@
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/e6209fa73c0ee6e7ae29bc70ab62f28c37766f55)
 
+
+## Day 83 : September 27, 2018
+ 
+**Today's progress** :  Completed PG GAN example that fully consistent with the paper on Tensorflow branch. Only Inception score left to be realized.
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/94775db202df9c4a7a4529811c45a9ac25e2c6c8)
