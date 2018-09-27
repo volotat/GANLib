@@ -16,10 +16,6 @@ from skimage.measure import block_reduce
 #   Takes as input some dataset and trains the network as usual GAN but progressively 
 #   adding layers to generator and discriminator.
 
-#       Note:
-#   This implementation of PG GAN trains much faster than original, but support only 
-#   constant amount of filters for all convolution layers.
-
 #-------------------------------
 # Auxiliary functions
 #-------------------------------  
@@ -66,7 +62,6 @@ def get_scaled_weight(shape, dtype, partition_info):
       
 initialization = get_scaled_weight
 
-filters = 64
 noise_dim = 64 
 channels = 3
 
@@ -98,16 +93,17 @@ def generator(input, gan):
     layer = tf.keras.layers.RepeatVector(16)(layer)
     layer = tf.keras.layers.Reshape((4, 4, noise_dim))(layer)
     
-    layer = new_sheet(filters, (4,4), 'same', 'genr_head_0')(layer)
-    layer = new_sheet(filters, (3,3), 'same', 'genr_head_1')(layer)
+    layer = new_sheet(filters_list[0], (4,4), 'same', 'genr_head_0')(layer)
+    layer = new_sheet(filters_list[0], (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
     for i in range(sheets):
         s = image_size_list[i + 1]
         layer = upscale2d(layer)
         if i == sheets-1: previous_step = layer
-            
-        layer = new_sheet(filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
+           
+        layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_a'+str(i))(layer)
+        layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_b'+str(i))(layer)
    
     next_step = tf.layers.conv2d(layer, channels, (1,1), name = 'to_rgb_'+str(sheets), kernel_initializer = initialization) #to RGB
     
@@ -126,12 +122,13 @@ def discriminator(input, gan):
     
     input_layer = input 
     
-    layer = tf.layers.conv2d(input_layer, filters, (1,1), name = 'from_rgb_'+str(sheets), kernel_initializer = initialization) #from RGB
+    layer = tf.layers.conv2d(input, filters_list[sheets], (1,1), name = 'from_rgb_'+str(sheets), kernel_initializer = initialization) #from RGB
     layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
     #Growing layers
     for i in range(sheets, 0, -1):
-        layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i), pix_norm = False)(layer)
+        layer = new_sheet(filters_list[i], (3,3), 'same', 'disc_layer_b'+str(i), pix_norm = False)(layer)
+        layer = new_sheet(filters_list[i - 1], (3,3), 'same', 'disc_layer_a'+str(i), pix_norm = False)(layer)
         layer = tf.layers.average_pooling2d(layer, 2, 2)
 
         #smooth fading
@@ -139,15 +136,15 @@ def discriminator(input, gan):
             next_step = layer
             
             previous_step = tf.layers.average_pooling2d(input_layer, 2, 2)
-            previous_step = tf.layers.conv2d(previous_step, filters, (1,1), name = 'from_rgb_'+str(sheets - 1), kernel_initializer = initialization) #from RGB
+            previous_step = tf.layers.conv2d(previous_step, filters_list[i - 1], (1,1), name = 'from_rgb_'+str(sheets - 1), kernel_initializer = initialization) #from RGB
             previous_step = tf.nn.leaky_relu(previous_step, alpha=0.2)
         
             layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
                 
     
     layer = utils.MiniBatchStddev(layer, group_size=4)
-    layer = new_sheet(filters, (3,3), 'same', 'disc_head_0', pix_norm = False)(layer)
-    layer = new_sheet(filters, (4,4), 'valid', 'disc_head_1', pix_norm = False)(layer)
+    layer = new_sheet(filters_list[0], (3,3), 'same', 'disc_head_0', pix_norm = False)(layer)
+    layer = new_sheet(filters_list[0], (4,4), 'valid', 'disc_head_1', pix_norm = False)(layer)
     
     layer = tf.keras.layers.Flatten()(layer)
     layer = tf.layers.dense(layer, 1, kernel_initializer = initialization)
@@ -202,10 +199,10 @@ dataset = augment(dataset)
 epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
+filters_list = [48, 32, 24, 16]
 
 optimizer = tf.train.AdamOptimizer(0.001, 0., 0.99, epsilon = 1e-08) #Hyperparameters for optimizer from paper
 with tf.Session() as sess:
-    ind = 0
     t = time.time()
     dataset_t = tf.Variable(np.zeros_like(dataset), dtype = tf.float32)
     for i in range(len(epochs_list)):    
@@ -221,9 +218,7 @@ with tf.Session() as sess:
         gan.discriminator = lambda x: discriminator(x, gan) #define discriminator model
         
         def callback():
-            global ind
-            ind += 1
-            sample_images(gan, 'imgs/%d.png'%(ind)) # 'imgs/pg_gan.png'
+            sample_images(gan, 'pg_gan.png')
             
         gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)  
         sheets += 1

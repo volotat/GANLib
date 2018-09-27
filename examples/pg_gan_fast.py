@@ -205,7 +205,6 @@ image_size_list = [4, 8, 16, 32]
 
 optimizer = tf.train.AdamOptimizer(0.001, 0., 0.99, epsilon = 1e-08) #Hyperparameters for optimizer from paper
 with tf.Session() as sess:
-    ind = 0
     t = time.time()
     dataset_t = tf.Variable(np.zeros_like(dataset), dtype = tf.float32)
     for i in range(len(epochs_list)):    
@@ -221,9 +220,7 @@ with tf.Session() as sess:
         gan.discriminator = lambda x: discriminator(x, gan) #define discriminator model
         
         def callback():
-            global ind
-            ind += 1
-            sample_images(gan, 'imgs/%d.png'%(ind)) # 'imgs/pg_gan.png'
+            sample_images(gan, 'pg_gan.png')
             
         gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)  
         sheets += 1
