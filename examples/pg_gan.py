@@ -101,11 +101,7 @@ def generator(input, gan):
         s = image_size_list[i + 1]
         layer = upscale2d(layer)
         if i == sheets-1: previous_step = layer
-<<<<<<< HEAD
             
-=======
-           
->>>>>>> Tensorflow
         layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_a'+str(i))(layer)
         layer = new_sheet(filters_list[i+1], (3,3), 'same', 'genr_layer_b'+str(i))(layer)
    
@@ -224,11 +220,7 @@ with tf.Session() as sess:
         def callback():
             sample_images(gan, 'pg_gan.png')
             
-<<<<<<< HEAD
-    sheets += 1
-=======
         gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)  
         sheets += 1
         
     print('Training complete! Total traning time: %f s'%(time.time() - t))   
->>>>>>> Tensorflow
