@@ -1,18 +1,9 @@
-from GANLib import WGAN_GP, utils
+from GANLib import GAN, utils, distances
 
-import keras 
-from keras.datasets import cifar10
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, concatenate, add, RepeatVector, UpSampling2D
-from keras.layers import AveragePooling2D, Lambda
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.convolutional import UpSampling2D, Conv2D
-from keras.models import Model
-from keras.optimizers import Adam
-
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-
-import keras.backend as K
+import time
 
 from skimage.measure import block_reduce
 
@@ -47,62 +38,33 @@ def augment(data):
     data = np.concatenate((data,off_y_p,off_y_m), axis = 0)
     
     return data
-
-def dynamic_he_scale(x, gain = np.sqrt(2)): 
-    #He's normal dynamic weight scaler
-    shape = x.shape.as_list()
-    fan_in, _ = keras.initializers._compute_fans(shape)
-    std = np.sqrt(gain / max(1., fan_in)) 
-    x_scale = x * K.constant(std)
     
-    return x_scale
-   
-class Conv2D_sw(Conv2D): #Conv2D layer with dynamically scaled weights
-    def __init__(self, filters, kernel_size, **kwargs):
-        super(Conv2D_sw, self).__init__(
-            filters=filters,
-            kernel_size=kernel_size,
-            **kwargs)
-       
-    def call(self, inputs):
-        outputs = K.conv2d(
-                inputs,
-                weights_scale_func(self.kernel),
-                strides=self.strides,
-                padding=self.padding,
-                data_format=self.data_format,
-                dilation_rate=self.dilation_rate)
+def upscale2d(x, factor=2):
+    assert isinstance(factor, int) and factor >= 1
+    if factor == 1: return x
+    with tf.variable_scope('Upscale2D'):
+        s = x.shape
+        x = tf.reshape(x, [-1, s[1], 1, s[2], 1, s[3]])
+        x = tf.tile(x, [1, 1, factor, 1, factor, 1])
+        x = tf.reshape(x, [-1, s[1] * factor, s[2] * factor, s[3]])
+        return x
         
-        if self.use_bias:
-            outputs = K.bias_add(
-                outputs,
-                self.bias,
-                data_format=self.data_format)
-                
-        if self.activation is not None:
-            return self.activation(outputs)
-            
-        return outputs
-
-class Dense_sw(Dense): #Dense layer with dynamically scaled weights
-    def __init__(self, units, **kwargs):
-        super(Dense_sw, self).__init__(units = units, **kwargs)
-       
-    def call(self, inputs):
-        output = K.dot(inputs, weights_scale_func(self.kernel))
-        if self.use_bias:
-            output = K.bias_add(output, self.bias, data_format='channels_last')
-        if self.activation is not None:
-            output = self.activation(output)
-        return output
-     
-           
+def get_scaled_weight(shape, dtype, partition_info):
+    #He's normal dynamic weight scaler
+    if len(shape) == 2:
+        fan_in = shape[0]
+    else:
+        receptive_field_size = np.prod(shape[:-2])
+        fan_in = shape[-2] * receptive_field_size
+        
+    std = np.sqrt(2 / max(1., fan_in))
+    return tf.get_variable("w", shape=shape, initializer=tf.initializers.random_normal(0, 1), dtype = tf.float32) * std
+ 
 #-------------------------------
 # Define models structure
 #-------------------------------      
       
-initialization = 'he_normal' #keras.initializers.RandomNormal(0, 1)  
-weights_scale_func = dynamic_he_scale
+initialization = get_scaled_weight
 
 filters = 64
 noise_dim = 64 
@@ -114,89 +76,92 @@ sheets = 0
 
 def new_sheet(filters, kernel_size, padding, name, pix_norm = True):
     def func(layer):
-        w = weights.get(name,None)
-        layer = Conv2D_sw(filters, kernel_size, padding=padding, weights = w, name = name, kernel_initializer = initialization)(layer)
-        layer = LeakyReLU(alpha=0.2)(layer) 
-        if pix_norm: layer = utils.PixelNorm()(layer)
+        layer = tf.layers.conv2d(layer, filters, kernel_size, padding=padding, name = name, kernel_initializer = initialization)
+        layer = tf.nn.leaky_relu(layer, alpha=0.2) 
+        if pix_norm: layer = utils.PixelNorm(layer)
         return layer
     return func
     
-def transition_alpha(self):
-    return K.minimum(self.epoch.tensor / (self.epochs.tensor/2), 1) 
+def transition_alpha(gan):
+    epoch = tf.cast(gan.epoch, tf.float32)
+    epochs = tf.cast(gan.epochs, tf.float32)
+    a = epoch / (epochs/ 2)
+    b = 1
+    return tf.minimum(a, b) 
    
-def build_generator(self):
+def generator(input, gan):
     previous_step = None
     next_step = None
 
-    input_layer = Input(shape=(self.latent_dim,))
-    layer = RepeatVector(16)(input_layer)
-    layer = Reshape((4, 4, self.latent_dim))(layer)
+    layer = input
+    
+    layer = tf.keras.layers.RepeatVector(16)(layer)
+    layer = tf.keras.layers.Reshape((4, 4, noise_dim))(layer)
     
     layer = new_sheet(filters, (4,4), 'same', 'genr_head_0')(layer)
     layer = new_sheet(filters, (3,3), 'same', 'genr_head_1')(layer)
     
     #Growing layers
     for i in range(sheets):
-        layer = UpSampling2D(2)(layer)
+        s = image_size_list[i + 1]
+        layer = upscale2d(layer)
         if i == sheets-1: previous_step = layer
             
         layer = new_sheet(filters, (3,3), 'same', 'genr_layer_0'+str(i))(layer)
    
-    next_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None), name = 'to_rgb', kernel_initializer = initialization)(layer) #to RGB
+    next_step = tf.layers.conv2d(layer, channels, (1,1), name = 'to_rgb_'+str(sheets), kernel_initializer = initialization) #to RGB
     
     #smooth fading
     if previous_step is not None: 
-        previous_step = Conv2D_sw(channels, (1,1), weights = weights.get('to_rgb',None))(previous_step) 
-        layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
+        previous_step = tf.layers.conv2d(previous_step, channels, (1,1), name = 'to_rgb_'+str(sheets - 1)) 
+        layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
     else:
         layer = next_step
       
-    return Model(input_layer, layer)
+    return layer
     
-def build_discriminator(self):
+def discriminator(input, gan):
     previous_step = None
     next_step = None
     
-    input_layer = Input(shape=self.input_shape)
+    input_layer = input 
     
-    layer = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None), name = 'from_rgb', kernel_initializer = initialization)(input_layer) #from RGB
-    layer = LeakyReLU(alpha=0.2)(layer) 
-    layer = utils.PixelNorm()(layer)
+    layer = tf.layers.conv2d(input_layer, filters, (1,1), name = 'from_rgb_'+str(sheets), kernel_initializer = initialization) #from RGB
+    layer = tf.nn.leaky_relu(layer, alpha=0.2)
     
     #Growing layers
     for i in range(sheets, 0, -1):
-        layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i))(layer)
-        layer = AveragePooling2D(2)(layer)
+        layer = new_sheet(filters, (3,3), 'same', 'disc_layer_0'+str(i), pix_norm = False)(layer)
+        layer = tf.layers.average_pooling2d(layer, 2, 2)
 
         #smooth fading
         if i == sheets:
             next_step = layer
             
-            previous_step = AveragePooling2D(2)(input_layer)
-            previous_step = Conv2D_sw(filters, (1,1), weights = weights.get('from_rgb',None))(previous_step) #from RGB
-            previous_step = LeakyReLU(alpha=0.2)(previous_step) 
-            previous_step = utils.PixelNorm()(previous_step)
+            previous_step = tf.layers.average_pooling2d(input_layer, 2, 2)
+            previous_step = tf.layers.conv2d(previous_step, filters, (1,1), name = 'from_rgb_'+str(sheets - 1), kernel_initializer = initialization) #from RGB
+            previous_step = tf.nn.leaky_relu(previous_step, alpha=0.2)
         
-            layer = Lambda(lambda x: x[0] + (x[1] - x[0]) * transition_alpha(self))([previous_step, next_step])
+            layer = previous_step + (next_step - previous_step) * transition_alpha(gan)
                 
     
-    layer = utils.MiniBatchStddev(group_size=4)(layer)
-    layer = new_sheet(filters, (3,3), 'same', 'disc_head_0')(layer)
-    layer = new_sheet(filters, (4,4), 'valid', 'disc_head_1')(layer)
+    layer = utils.MiniBatchStddev(layer, group_size=4)
+    layer = new_sheet(filters, (3,3), 'same', 'disc_head_0', pix_norm = False)(layer)
+    layer = new_sheet(filters, (4,4), 'valid', 'disc_head_1', pix_norm = False)(layer)
     
-    layer = Flatten()(layer)
-    layer = Dense_sw(1, activation=self.disc_activation, kernel_initializer = initialization)(layer)
+    layer = tf.keras.layers.Flatten()(layer)
+    layer = tf.layers.dense(layer, 1, kernel_initializer = initialization)
 
-    return Model(input_layer, layer)
+    return layer
     
 #-------------------------------
 #  Main code
 #-------------------------------  
 
-r, c = 4, 6
+r, c = 3, 5
 sample_noise = np.random.uniform(-1, 1, (r * c, noise_dim))
 def sample_images(gen, file):
-    gen_imgs = gen.predict([sample_noise])
+    gen_imgs = gen.predict(sample_noise, moving_avarage = True)
 
     # Rescale images 0 - 1
     gen_imgs = 0.5 * gen_imgs + 0.5
@@ -218,7 +183,7 @@ def sample_images(gen, file):
     
     
 # Load the dataset
-(dataseta, labelsa), (datasetb, labelsb) = cifar10.load_data()
+(dataseta, labelsa), (datasetb, labelsb) = tf.keras.datasets.cifar10.load_data()
 dataset = np.concatenate((dataseta,datasetb), axis = 0)
 labels = np.concatenate((labelsa,labelsb), axis = 0)
 
@@ -238,29 +203,26 @@ epochs_list = [4000, 8000, 16000, 32000]
 batch_size_list = [16, 16, 16, 16]  
 image_size_list = [4, 8, 16, 32] 
 
-for i in range(len(epochs_list)):    
-    epochs = epochs_list[i]
-    batch_size = batch_size_list[i]
-    
-    sz = dataset.shape[1] // image_size_list[i]
-    data_set = block_reduce(dataset, block_size=(1, sz, sz, 1), func=np.mean) 
-    print(data_set.shape)
-    
-    # Build and train GAN
-    gan = WGAN_GP(data_set.shape[1:], noise_dim, optimizer = Adam(0.0002, 0.5, 0.9, clipnorm = 10))
-    gan.generator = build_generator(gan) #define generator model
-    gan.discriminator = build_discriminator(gan) #define discriminator model
-
-    def callback():
-        sample_images(gan.generator, 'pg_gan.png')
+optimizer = tf.train.AdamOptimizer(0.001, 0., 0.99, epsilon = 1e-08) #Hyperparameters for optimizer from paper
+with tf.Session() as sess:
+    t = time.time()
+    dataset_t = tf.Variable(np.zeros_like(dataset), dtype = tf.float32)
+    for i in range(len(epochs_list)):    
+        epochs = epochs_list[i]
+        batch_size = batch_size_list[i]
         
-    gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)    
-    
-    # Save weights of the network
-    for l in gan.generator.layers:
-        weights[l.name] = l.get_weights() 
+        data_set = sess.run(tf.image.resize_bilinear(dataset_t, (image_size_list[i], image_size_list[i])), feed_dict = {dataset_t: dataset})
+        print(data_set.shape)
         
-    for l in gan.discriminator.layers:
-        weights[l.name] = l.get_weights() 
+        # Build and train GAN
+        gan = GAN(sess, data_set.shape[1:], noise_dim, optimizer = optimizer, distance = distances.wasserstein_gp)
+        gan.generator = lambda x: generator(x, gan) #define generator model
+        gan.discriminator = lambda x: discriminator(x, gan) #define discriminator model
+        
+        def callback():
+            sample_images(gan, 'pg_gan.png')
             
-    sheets += 1
+        gan.train(data_set, epochs = epochs, batch_size = batch_size, checkpoint_callback = callback, collect_history = False)  
+        sheets += 1
+        
+    print('Training complete! Total traning time: %f s'%(time.time() - t))   

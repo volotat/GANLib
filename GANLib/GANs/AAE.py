@@ -1,10 +1,6 @@
-from keras.layers import Input, Lambda
-from keras.models import Model, load_model
-from keras.optimizers import Adam
-import os
+import tensorflow as tf
 import numpy as np
 
-import keras.backend as K
 
 from .. import metrics
 from .. import utils
@@ -18,99 +14,92 @@ from .GAN import GAN
 #   realistic samples from random noise and make encoder generate  more
 #   useful latent representation of data. 
 
-#       To do:
-#   Do not store control value
-
 class AAE(GAN):
-    def __init__(self, input_shape, latent_dim = 100, **kwargs):
-        super(AAE, self).__init__(input_shape, latent_dim , **kwargs)
+    def __init__(self, sess, input_shape, latent_dim = 100, **kwargs):
+        super(AAE, self).__init__(sess, input_shape, latent_dim , **kwargs)
         
     def set_models_params(self):
-        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, clipnorm = 10)
+        if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.0002, 0.5, epsilon = 1e-07)
+        if self.distance is None: self.distance = distances.minmax
             
         self.models = ['encoder', 'decoder', 'discriminator']
-        self.loss = 'mse'
-        self.disc_activation = 'sigmoid'    
-        
-    def build_graph(self):
-        TINY = 1e-8
-    
-        E = self.encoder
-        D = self.decoder
-        DSC = self.discriminator
-        
-        real_img = Input(shape=self.input_shape)
-        real_lat = Input(shape=(self.latent_dim,))
-        real_val = DSC(real_lat) 
-        genr_val = DSC(E(real_img))
-        
-        self.encoded_decoded = Model(real_img, D(E(real_img)))
-        self.encoded_decoded.compile(loss=self.loss, optimizer=self.optimizer)
-        
-        self.discriminator.trainable = True
-        self.encoder.trainable = False
-        
-        DSC_tns = Lambda(lambda x: -K.mean(K.log(x[0] + TINY) + K.log(1.0 - x[1] + TINY)) )([real_val, genr_val])
-        self.disc_model = Model([real_lat, real_img], DSC_tns)
-        self.disc_model.compile(loss=utils.ident_loss, optimizer=self.optimizer)
-        
-        self.discriminator.trainable = False
-        self.encoder.trainable = True
-        
-        GNR_tns = Lambda(lambda x: -K.mean(K.log(x[0] + TINY)))([genr_val])
-        self.genr_model = Model([real_img], GNR_tns)
-        self.genr_model.compile(loss=utils.ident_loss, optimizer=self.optimizer)
 
-    def prepare_data(self, data_set, validation_split, batch_size):
-        super(AAE, self).prepare_data(data_set, validation_split, batch_size)
+    def build_graph(self):
         
-        #This values will be used in a way that do no affect the network
-        self.dummy = np.zeros((batch_size, 1))
+        def ENC(x):
+            with tf.variable_scope('ENC', reuse=tf.AUTO_REUSE) as scope:
+                res = self.encoder(x)
+            return res
+            
+        def DEC(x):
+            with tf.variable_scope('DEC', reuse=tf.AUTO_REUSE) as scope:
+                res = self.decoder(x)
+            return res
+            
+        def D(x):
+            with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
+                logits = self.discriminator(x)
+            return logits
         
+        self.enc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
+        self.dec_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
+        self.disc_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
+        
+        self.autoencode_loss = tf.reduce_mean(tf.squared_difference(self.enc_input, DEC(ENC(self.enc_input))))
+        self.autoencode_vars = tf.trainable_variables('ENC') + tf.trainable_variables('DEC')
+        self.autoencode_train = self.optimizer.minimize(self.autoencode_loss, var_list=self.autoencode_vars)
+        
+        self.dec = DEC(self.dec_input)
+
+        # Domain a GAN
+        genr = ENC(self.enc_input)
+        logit_real = D(self.disc_input)
+        logit_fake = D(genr)
+        
+        real = self.disc_input
+        fake = genr
+        
+        dist_a = self.distance(
+            optimizer = self.optimizer, 
+            logits = [logit_real, logit_fake], 
+            examples = [real, fake], 
+            models = [ENC, D],
+            inputs = [self.enc_input, self.disc_input],
+            vars = [tf.trainable_variables('ENC'), tf.trainable_variables('D')],
+            gan = self
+            )
+            
+        self.train_genr, self.train_disc = dist_a.get_train_sessions() 
+        self.genr_loss, self.disc_loss = dist_a.get_losses()
+                
+        self.sess.run(tf.global_variables_initializer())
+     
+    def predict(self, noise):  
+        imgs = self.sess.run(self.dec, feed_dict = {self.dec_input: noise})
+        return imgs 
+     
     def train_on_batch(self, batch_size):
-        # ---------------------
-        #  Reconstruction
-        # ---------------------
+        for j in range(self.n_critic):
+            # Select a random batch of images
+            idx = np.random.randint(0, self.train_set.shape[0], batch_size)
+            imgs = self.train_set[idx]
         
-        # Select a random batch of images
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
+            # Sample noise as generator input
+            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            self.sess.run(self.train_disc, feed_dict={self.disc_input: noise, self.enc_input: imgs})
+                        
+        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+        self.sess.run([self.train_genr], feed_dict={self.disc_input: noise, self.enc_input: imgs})
         
-        # Train the encoder-decoder model as usual autoencoder
-        self.m_loss = self.encoded_decoded.train_on_batch([imgs], imgs)
+        d_loss, g_loss = self.sess.run([self.disc_loss, self.genr_loss], feed_dict={self.disc_input: noise, self.enc_input: imgs})
         
-        # ---------------------
-        #  Regularization
-        # ---------------------
-        
-        #train discriminator to recognize distributions
-        #real_lats = np.random.normal(size=(batch_size, self.latent_dim))
-        real_lats = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        d_loss = self.disc_model.train_on_batch([real_lats, imgs], self.dummy)
-        
-        #train encode to produce right distribution
-        g_loss = self.genr_model.train_on_batch([imgs], self.dummy)
+        # train Autoencoder
+        self.sess.run(self.autoencode_train, feed_dict={self.enc_input: imgs}) 
+        self.m_loss = self.sess.run(self.autoencode_loss, feed_dict={self.enc_input: imgs})
         
         return d_loss, g_loss
         
     def test_network(self, batch_size):
-        idx = np.random.randint(0, self.train_set.shape[0], batch_size)
-        imgs = self.train_set[idx]
+        metric = self.m_loss
         
-        gen_lats = self.encoder.predict([imgs])
-        real_lats = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-    
-        gen_val = self.discriminator.predict([gen_lats])
-        train_val = self.discriminator.predict([real_lats])
-        
-        
-        if self.valid_set is not None: 
-            idx = np.random.randint(0, self.valid_set.shape[0], batch_size)
-            val_imgs = self.valid_set[idx]
-            val_gen_lats = self.encoder.predict([val_imgs])
-            test_val = self.discriminator.predict([val_gen_lats])
-        else:
-            test_val = np.zeros(batch_size)
-        
-        metric = self.m_loss    
-        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
+        return {'metric': metric}

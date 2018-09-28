@@ -1,7 +1,4 @@
-from keras.layers import Input
-from keras.models import Model, load_model
-from keras.optimizers import Adam
-import os
+import tensorflow as tf
 import numpy as np
 
 
@@ -25,41 +22,60 @@ class CGAN(GAN):
         org_set = set_data[n_indx]
         
         noise = np.random.uniform(-1, 1, (pred_num, self.latent_dim))
-        gen_set = self.generator.predict([noise,labels]) 
+        gen_set = self.predict(noise,labels) 
         met_arr = metrics.magic_distance(org_set, gen_set)
         return met_arr
 
-    def __init__(self, input_shapes, latent_dim = 100, **kwargs):
-        super(CGAN, self).__init__(input_shapes[0], latent_dim , **kwargs)
+    def __init__(self, sess, input_shapes, latent_dim = 100, **kwargs):
+        super(CGAN, self).__init__(sess, input_shapes[0], latent_dim , **kwargs)
         self.label_shape = input_shapes[1]
         
     def set_models_params(self):
-        if self.optimizer is None: self.optimizer = Adam(0.0002, 0.5, 0.9)
+        if self.optimizer is None: self.optimizer = tf.train.AdamOptimizer(0.001, 0.5, epsilon = 1e-07)
+        if self.distance is None: self.distance = distances.minmax
             
         self.models = ['generator', 'discriminator']
-        self.loss = 'binary_crossentropy'
-        self.disc_activation = 'sigmoid'
 
     def build_graph(self):
-        self.discriminator.compile(loss=self.loss, optimizer=self.optimizer)
         
-        # The generator takes noise and the target label as input
-        # and generates the corresponding digit of that label
-        noise = Input(shape=(self.latent_dim,))
-        label = Input(shape=self.label_shape)
-        img = self.generator([noise, label])
-
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
-
-        # The discriminator takes generated image as input and determines validity
-        # and the label of that image
-        valid = self.discriminator([img, label])
-
-        # The combined model  (stacked generator and discriminator)
-        # Trains generator to fool discriminator
-        self.combined = Model([noise, label], valid)
-        self.combined.compile(loss=self.loss, optimizer=self.optimizer)
+        def G(x, l):
+            with tf.variable_scope('G', reuse=tf.AUTO_REUSE) as scope:
+                res = self.generator(x, l)
+            return res
+            
+        def D(x, l):
+            with tf.variable_scope('D', reuse=tf.AUTO_REUSE) as scope:
+                logits = self.discriminator(x, l)
+            return logits
+        
+        self.genr_input = tf.placeholder(tf.float32, shape=(None, self.latent_dim))
+        self.genr_label = tf.placeholder(tf.float32, shape=(None,) + self.label_shape)
+        
+        self.disc_input = tf.placeholder(tf.float32, shape=(None,) + self.input_shape)
+        self.disc_label = tf.placeholder(tf.float32, shape=(None,) + self.label_shape)
+        
+        
+        self.genr = G(self.genr_input, self.genr_label)
+        logit_real = D(self.disc_input, self.disc_label)
+        logit_fake = D(self.genr, self.genr_label)
+        
+        real = self.disc_input
+        fake = self.genr
+        
+        dist = self.distance(
+            optimizer = self.optimizer, 
+            logits = [logit_real, logit_fake], 
+            examples = [real, fake], 
+            models = [G, D],
+            inputs = [self.genr_input, self.disc_input],
+            vars = [tf.trainable_variables('G'), tf.trainable_variables('D')],
+            gan = self
+            )
+            
+        self.train_genr, self.train_disc = dist.get_train_sessions() 
+        self.genr_loss, self.disc_loss = dist.get_losses()
+        
+        self.sess.run(tf.global_variables_initializer())
      
     def prepare_data(self, data_set, validation_split, batch_size):
         if 0. < validation_split < 1.:
@@ -74,70 +90,29 @@ class CGAN(GAN):
             self.train_set_labels = data_set[1]
             self.valid_set_data = None
             self.valid_set_labels = None
-    
-        #collect statistical info of data
-        self.data_set_std = np.std(data_set[0],axis = 0)
-        self.data_set_mean = np.mean(data_set[0],axis = 0)
-        
-        self.label_set_std = np.std(data_set[1],axis = 0)
-        self.label_set_mean = np.mean(data_set[1],axis = 0)
-    
-        # Adversarial ground truths
-        out_shape = self.discriminator.output_shape
-        self.valid = np.ones((batch_size,) + out_shape[1:])
-        self.fake = np.zeros((batch_size,) + out_shape[1:])
-        #self.valid = np.ones((batch_size, 1))
-        #self.fake = np.zeros((batch_size, 1))
+     
+    def predict(self, noise, labels):  
+        imgs = self.sess.run(self.genr, feed_dict = {self.genr_input: noise, self.genr_label: labels})
+        return imgs 
      
     def train_on_batch(self, batch_size):
-        # ---------------------
-        #  Train Discriminator
-        # ---------------------
-
-        # Select a random batch of images
-        idx = np.random.randint(0, self.train_set_data.shape[0], batch_size)
-        imgs, labels = self.train_set_data[idx], self.train_set_labels[idx]
-
-        # Sample noise as generator input
+        for j in range(self.n_critic):
+            # Select a random batch of images
+            idx = np.random.randint(0, self.train_set_data.shape[0], batch_size)
+            imgs = self.train_set_data  [idx]
+            lbls = self.train_set_labels[idx]
+        
+            # Sample noise as generator input
+            noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
+            self.sess.run(self.train_disc, feed_dict={self.disc_input: imgs, self.disc_label: lbls, self.genr_label: lbls, self.genr_input: noise})
+            
         noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-
-        # Generate new images
-        gen_imgs = self.generator.predict([noise, labels])
+        self.sess.run([self.train_genr], feed_dict={self.disc_input: imgs, self.disc_label: lbls, self.genr_label: lbls, self.genr_input: noise})
         
-        d_loss_real = self.discriminator.train_on_batch([imgs,labels], self.valid)
-        d_loss_fake = self.discriminator.train_on_batch([gen_imgs,labels], self.fake)
-        d_loss = (d_loss_real + d_loss_fake) / 2
-        
-        # ---------------------
-        #  Train Generator
-        # ---------------------
-        
-        # Train the generator
-        g_loss = self.combined.train_on_batch([noise, labels], self.valid)
-        
+        d_loss, g_loss = self.sess.run([self.disc_loss, self.genr_loss], feed_dict={self.disc_input: imgs, self.disc_label: lbls, self.genr_label: lbls, self.genr_input: noise})
         return d_loss, g_loss
         
     def test_network(self, batch_size):
-        idx = np.random.randint(0, self.train_set_data.shape[0], batch_size)
-        imgs, labels = self.train_set_data[idx], self.train_set_labels[idx]
-        
-        noise = np.random.uniform(-1, 1, (batch_size, self.latent_dim))
-        gen_imgs = self.generator.predict([noise, labels])
-        gen_val = self.discriminator.predict([gen_imgs, labels])
-        train_val = self.discriminator.predict([imgs, labels])
-        
-        if self.valid_set_data is not None and self.valid_set_labels is not None: 
-            idx = np.random.randint(0, self.valid_set_data.shape[0], batch_size)
-            test_val = self.discriminator.predict([self.valid_set_data[idx], self.valid_set_labels[idx]])
-        else:
-            test_val = np.zeros(batch_size)
-        '''
-        noise_as_data = np.random.normal(self.data_set_mean, self.data_set_std, (batch_size,)+ self.input_shape)
-        #noise_as_labels = np.random.normal(self.label_set_mean, self.label_set_std, (batch_size,)+ self.label_shape)
-        data_cont_val  = self.discriminator.predict([noise_as_data, labels])
-        #label_cont_val = self.discriminator.predict([imgs, noise_as_labels])
-        cont_val = data_cont_val
-        '''
         metric = self.metric_test(self.train_set_data, self.train_set_labels, batch_size)   
         
-        return {'metric': metric, 'gen_val': gen_val, 'train_val': train_val, 'test_val': test_val}
+        return {'metric': metric}

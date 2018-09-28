@@ -1,9 +1,9 @@
+import tensorflow as tf
 import numpy as np
-import keras
 from scipy import ndimage, misc
 
 
-#Distance defined as (1 - average of probabilities data points from one set appears in other set)
+#Distance defined as (1 - average of probabilities data points from one set appears in other set), the higher p and amount of data points the better the estimate
 def magic_distance(set_real, set_pred, p = 1000):
     set_pred_ = np.expand_dims(set_pred, axis=-1)
     set_real_ = np.expand_dims(set_real, axis=-1)
@@ -14,19 +14,21 @@ def magic_distance(set_real, set_pred, p = 1000):
     return result
     
     
-
-#Works only for images with channel last format    
+#Works only for images with channel last format and 3 channels input  
 inception_model = None
 def inception_score(set_real, set_pred, splits=10):
     global inception_model
+    assert set_pred.shape[-1] == 3
     
     if inception_model is None:
-        inception_model = keras.applications.inception_v3.InceptionV3(weights='imagenet', include_top=True) 
+        inception_model = tf.keras.applications.inception_v3.InceptionV3(weights='imagenet', include_top=True) 
         print('Inception model initialization')   
 
     size = set_pred.shape[0]
     if len(set_pred.shape) > 3: chan = set_pred.shape[-1]
-    else: chan = 1
+    else: 
+        chan = 1
+        set_pred = set_pred.reshape(set_pred.shape[0], set_pred.shape[1], set_pred.shape[2], 1)
     
     n_img = np.zeros((size, 299, 299, chan))
     for i in range(size):
