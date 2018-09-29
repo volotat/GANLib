@@ -29,4 +29,4 @@ Magic Distance. (Estimate probability that points from one set appear in the oth
 Iception score. (Working only with image batches containing 3 channels in last channel format) 
 
 ---
-Also this project is a part of [#100DaysofMLCode](https://github.com/llSourcell/100_Days_of_ML_Code), so I have a bit more motivation to work on it everyday. You can see my progress of implementing it right here: [100DMLCLog.md](100DMLCLog.md)
+Also this project is a part of [#100DaysofMLCode](https://github.com/llSourcell/100_Days_of_ML_Code) challenge, so I have a bit more motivation to work on it everyday. You can see my progress of implementing it right here: [100DMLCLog.md](100DMLCLog.md)
