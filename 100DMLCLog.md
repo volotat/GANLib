@@ -583,3 +583,10 @@
 **Today's progress** :  Added inception score to Tensorflow branch. So now it's remains full functionality of Keras version and become a main one.
 
 **Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/0b2559a170731a7d2f1e14cc282408c0408dfbcc)
+
+
+## Day 85 : September 29, 2018
+ 
+**Today's progress** :  Started implementing image-to-image translation model
+
+**Link to work:**  [Commit](https://github.com/Mylittlerapture/GANLib/commit/202e6b7214a7ce4f80b3d8ccd98c3bea4f50b842)
