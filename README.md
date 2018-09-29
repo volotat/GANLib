@@ -23,3 +23,7 @@ Crossentropy (Same as original but written in terms of cross entropy cost functi
 Wasserstein (Earth mover's distance applyed to GAN) https://arxiv.org/pdf/1701.07875.pdf  
 Wasserstein GP (Improved version of Wasserstein distance) https://arxiv.org/pdf/1704.00028.pdf  
 Cramer (Most advanced, but difficult to calculate distance) https://openreview.net/pdf?id=S1m6h21Cb  !!! discriminator output layer should have more that one neuron, and bigger the number the better !!!  
+
+### Metrics
+Magic Distance. (Estimate probability that points from one set appear in the other. Totally ignorant to mode collapse problem.)
+Iception score. (Working only with image batches containing 3 channels in last channel format) 
