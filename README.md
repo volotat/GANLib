@@ -30,4 +30,4 @@ Iception score. (Working only with image batches containing 3 channels in last c
 
 
 ### Note
-I take some break with this project for a while, but it does not mean I done with it. Actually I have a lot of ideas how to use this project for solving concrete tasks. But unfortuanatelly I do not have time to work on it right now.
+I take some break with this project for a while, but it does not mean I'm done with it. Actually I have a lot of ideas how to use this project for solving concrete tasks. But unfortuanatelly I do not have time to work on it right now.
