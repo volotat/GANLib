@@ -9,7 +9,8 @@ Matplotlib 2.1.1
 ### Examples
 Simple GAN: [simple_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/simple_gan.py)  
 Progressive Growing of GANs: [pg_gan.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/pg_gan.py)  
-And slightly faster version of it: [pg_gan_fast.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/pg_gan_fast.py)
+And slightly faster version of it: [pg_gan_fast.py](https://github.com/Mylittlerapture/GANLib/blob/master/examples/pg_gan_fast.py)  
+![Progressive Growing of GANs](examples/training.gif)  
 
 ### Available GANs
 Vanilla GAN. https://arxiv.org/pdf/1406.2661.pdf  
