@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from skimage.measure import block_reduce
-
-
 
 #                   Progressive Growing of GANs
 #   Paper: https://arxiv.org/pdf/1710.10196.pdf
